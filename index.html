@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Romantic Journey · 找旅行搭子</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="hero">
+      <div>
+        <p class="tag">Beta 社区原型</p>
+        <h1>先把「找搭子」做靠谱：筛人、评测、快配对</h1>
+        <p>
+          发布行程后，系统会按你的旅行风格、预算节奏、作息偏好给出匹配分，
+          让你更快找到合拍搭子，而不是盲等评论私聊。
+        </p>
+      </div>
+      <button id="seedBtn" class="secondary">重置示例数据</button>
+    </header>
+
+    <main class="layout">
+      <section class="card">
+        <h2>1) 我的旅行偏好（用于打分）</h2>
+        <form id="profileForm" class="grid">
+          <label>
+            旅行节奏
+            <select name="pace">
+              <option value="特种兵式">特种兵式</option>
+              <option value="平衡">平衡</option>
+              <option value="慢游">慢游</option>
+            </select>
+          </label>
+          <label>
+            预算级别
+            <select name="budgetLevel">
+              <option value="经济">经济</option>
+              <option value="舒适">舒适</option>
+              <option value="品质">品质</option>
+            </select>
+          </label>
+          <label>
+            起床时间偏好
+            <select name="wakeUp">
+              <option value="早起">早起</option>
+              <option value="自然醒">自然醒</option>
+              <option value="夜猫">夜猫</option>
+            </select>
+          </label>
+          <label>
+            社交强度
+            <select name="social">
+              <option value="外向">外向</option>
+              <option value="适中">适中</option>
+              <option value="安静">安静</option>
+            </select>
+          </label>
+          <button type="submit">保存偏好</button>
+        </form>
+      </section>
+
+      <section class="card">
+        <h2>2) 发布行程帖</h2>
+        <form id="tripForm" class="grid">
+          <label>目的地 <input required name="destination" placeholder="例如：京都" /></label>
+          <label>出发时间 <input required type="date" name="departDate" /></label>
+          <label>返程时间 <input required type="date" name="returnDate" /></label>
+          <label>预算（元） <input required type="number" min="200" name="budget" /></label>
+          <label>想去景点 <input required name="spots" placeholder="伏见稻荷, 清水寺" /></label>
+          <label>
+            旅行节奏
+            <select name="pace">
+              <option value="特种兵式">特种兵式</option>
+              <option value="平衡">平衡</option>
+              <option value="慢游">慢游</option>
+            </select>
+          </label>
+          <label>
+            作息
+            <select name="wakeUp">
+              <option value="早起">早起</option>
+              <option value="自然醒">自然醒</option>
+              <option value="夜猫">夜猫</option>
+            </select>
+          </label>
+          <label>
+            性格偏好
+            <select name="social">
+              <option value="外向">外向</option>
+              <option value="适中">适中</option>
+              <option value="安静">安静</option>
+            </select>
+          </label>
+          <button type="submit">发布并匹配</button>
+        </form>
+      </section>
+
+      <section class="card">
+        <h2>3) 快速匹配区</h2>
+        <div class="toolbar">
+          <input id="searchInput" placeholder="按目的地搜索（如 成都）" />
+          <select id="styleFilter">
+            <option value="all">全部节奏</option>
+            <option value="特种兵式">特种兵式</option>
+            <option value="平衡">平衡</option>
+            <option value="慢游">慢游</option>
+          </select>
+        </div>
+        <p class="hint">点击「喜欢 / 不喜欢 / 收藏」即可沉淀偏好画像，后续推荐会更准。</p>
+        <div id="tripList" class="cards"></div>
+      </section>
+
+      <section class="card">
+        <h2>4) 我的互动记录</h2>
+        <div class="stats" id="stats"></div>
+      </section>
+
+      <section class="card">
+        <h2>5) 我的旅行主页（差异化）</h2>
+        <div class="profile-grid">
+          <section>
+            <h3>旅行记忆墙（图片 / 视频）</h3>
+            <form id="mediaForm" class="grid media-form">
+              <label>
+                内容类型
+                <select name="type">
+                  <option value="图片">图片</option>
+                  <option value="视频">视频</option>
+                </select>
+              </label>
+              <label>
+                目的地
+                <input required name="location" placeholder="例如：冰岛" />
+              </label>
+              <label>
+                封面 URL
+                <input required name="cover" placeholder="https://..." />
+              </label>
+              <label>
+                标题
+                <input required name="caption" placeholder="极光追逐日记" />
+              </label>
+              <button type="submit">发布到主页</button>
+            </form>
+            <div id="mediaList" class="media-wall"></div>
+          </section>
+
+          <section>
+            <h3>国家足迹与成就勋章</h3>
+            <div id="countryList" class="country-list"></div>
+            <div id="badgeList" class="badge-list"></div>
+          </section>
+        </div>
+      </section>
+    </main>
+
+    <template id="tripTemplate">
+      <article class="trip-item">
+        <header>
+          <h3></h3>
+          <span class="score"></span>
+        </header>
+        <p class="meta"></p>
+        <p class="spots"></p>
+        <ul class="chips"></ul>
+        <p class="trust"></p>
+        <footer>
+          <button data-action="like">👍 喜欢</button>
+          <button data-action="dislike" class="danger">👎 不喜欢</button>
+          <button data-action="save" class="secondary">⭐ 收藏</button>
+          <button data-action="connect" class="ghost">💬 私聊意向</button>
+        </footer>
+      </article>
+    </template>
+
+    <template id="mediaTemplate">
+      <article class="media-item">
+        <img alt="旅行分享封面" loading="lazy" />
+        <div>
+          <p class="media-title"></p>
+          <p class="media-meta"></p>
+        </div>
+      </article>
+    </template>
+
+    <script src="script.js"></script>
+  </body>
+</html>
