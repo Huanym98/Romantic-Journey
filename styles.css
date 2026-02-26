@@ -177,6 +177,22 @@ textarea {
   min-height: 96px;
 }
 .publish, .itinerary { color: var(--muted); margin: .3rem 0; }
+
+.author-row {
+  display: flex;
+  gap: .65rem;
+  align-items: center;
+  margin-bottom: .2rem;
+}
+.author-avatar {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--border);
+}
+.review, .footprint, .badges { color: var(--muted); margin: .3rem 0; }
+.media-delete { margin-top: .4rem; font-size: .82rem; padding: .35rem .55rem; }
 .tags {
   list-style: none;
   margin: .45rem 0;

@@ -28,7 +28,7 @@
 
     <section class="hero-strip">
       <h1>筛选更精准，结伴更靠谱</h1>
-      <p>支持行程标签、具体日程安排、点赞与发布时间，并提供最新/最热/综合排序。</p>
+      <p>支持行程标签、详细安排、点赞热度、头像信息和口碑评价。</p>
     </section>
 
     <aside id="profilePanel" class="profile-panel" hidden>
@@ -36,7 +36,7 @@
         <h2>编辑个人资料</h2>
         <button id="panelClose" class="ghost" type="button">关闭</button>
       </div>
-      <p class="hint">注册时填写，后续可随时修改（仅生日 / MBTI / 星座 / 技能 + 旅行偏好）。</p>
+      <p class="hint">仅保留必要资料：生日 / MBTI / 星座 / 技能标签 + 旅行偏好。</p>
       <form id="profileForm" class="grid">
         <label>生日 <input required type="date" name="birthday" /></label>
         <label>MBTI
@@ -66,6 +66,8 @@
             <label><input type="checkbox" name="skills" value="有相机" />有相机</label>
             <label><input type="checkbox" name="skills" value="有无人机" />有无人机</label>
             <label><input type="checkbox" name="skills" value="有Pocket" />有Pocket</label>
+            <label><input type="checkbox" name="skills" value="会日语" />会日语</label>
+            <label><input type="checkbox" name="skills" value="会韩语" />会韩语</label>
           </div>
         </label>
         <button type="submit">保存资料</button>
@@ -83,7 +85,7 @@
           <label>行程标签（逗号分隔） <input required name="tags" placeholder="citywalk,美食,摄影" /></label>
           <label>想去景点 <input required name="spots" placeholder="中央公园, 时代广场" /></label>
           <label class="full-width">具体行程安排
-            <textarea required name="itinerary" rows="4" placeholder="D1 上午中央公园，午餐Joe's Pizza，晚上时代广场；D2...\n"></textarea>
+            <textarea required name="itinerary" rows="4" placeholder="D1 上午中央公园，午餐吃什么，晚上去哪里"></textarea>
           </label>
           <label>旅行节奏 <select name="pace"><option value="特种兵式">特种兵式</option><option value="平衡">平衡</option><option value="慢游">慢游</option></select></label>
           <label>作息 <select name="wakeUp"><option value="早起">早起</option><option value="自然醒">自然醒</option><option value="夜猫">夜猫</option></select></label>
@@ -99,11 +101,7 @@
           <select id="styleFilter"><option value="all">全部节奏</option><option value="特种兵式">特种兵式</option><option value="平衡">平衡</option><option value="慢游">慢游</option></select>
           <select id="mbtiFilter"><option value="all">全部 MBTI</option></select>
           <select id="zodiacFilter"><option value="all">全部星座</option></select>
-          <select id="sortFilter">
-            <option value="comprehensive">综合排序</option>
-            <option value="newest">最新排序</option>
-            <option value="hottest">最热排序</option>
-          </select>
+          <select id="sortFilter"><option value="comprehensive">综合排序</option><option value="newest">最新排序</option><option value="hottest">最热排序</option></select>
           <button id="seedBtn" class="secondary" type="button">重置示例数据</button>
         </div>
         <div id="tripList" class="cards"></div>
@@ -122,7 +120,7 @@
             <form id="mediaForm" class="grid media-form">
               <label>内容类型 <select name="type"><option value="图片">图片</option><option value="视频">视频</option></select></label>
               <label>目的地 <input required name="location" placeholder="例如：冰岛" /></label>
-              <label>封面 URL <input required name="cover" placeholder="https://..." /></label>
+              <label>上传封面图片 <input required type="file" name="coverFile" accept="image/*" /></label>
               <label>标题 <input required name="caption" placeholder="极光追逐日记" /></label>
               <button type="submit">发布到主页</button>
             </form>
@@ -140,12 +138,20 @@
     <template id="tripTemplate">
       <article class="trip-item">
         <header><h3></h3><span class="score"></span></header>
-        <p class="meta"></p>
-        <p class="publish"></p>
+        <div class="author-row">
+          <img class="author-avatar" alt="搭子头像" />
+          <div>
+            <p class="meta"></p>
+            <p class="publish"></p>
+            <p class="review"></p>
+          </div>
+        </div>
         <p class="spots"></p>
         <p class="itinerary"></p>
         <ul class="tags"></ul>
         <ul class="chips"></ul>
+        <p class="footprint"></p>
+        <p class="badges"></p>
         <p class="trust"></p>
         <footer>
           <button data-action="like">👍 点赞</button>
@@ -159,7 +165,11 @@
     <template id="mediaTemplate">
       <article class="media-item">
         <img alt="旅行分享封面" loading="lazy" />
-        <div><p class="media-title"></p><p class="media-meta"></p></div>
+        <div>
+          <p class="media-title"></p>
+          <p class="media-meta"></p>
+          <button class="danger media-delete" data-action="delete-media" type="button">删除</button>
+        </div>
       </article>
     </template>
 
