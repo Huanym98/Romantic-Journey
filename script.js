@@ -17,6 +17,8 @@ const sortFilter = document.querySelector('#sortFilter');
 const seedBtn = document.querySelector('#seedBtn');
 const profileToggle = document.querySelector('#profileToggle');
 const currentNickname = document.querySelector('#currentNickname');
+const headerAvatar = document.querySelector('#profileToggle img');
+const avatarFileInput = document.querySelector('#avatarFile');
 const switchAccountBtn = document.querySelector('#switchAccountBtn');
 const logoutBtn = document.querySelector('#logoutBtn');
 const profilePanel = document.querySelector('#profilePanel');
@@ -98,16 +100,17 @@ const defaultState = {
     budgetLevel: '舒适',
     wakeUp: '自然醒',
     social: '适中',
-    skills: ['会拍照', '有相机']
+    skills: ['会拍照', '有相机'],
+    avatar: defaultAvatar
   },
   trips: sampleTrips,
   mediaPosts: sampleMedia,
   actions: { like: [], dislike: [], save: [], connect: [] }
 };
 
-const currentUsername = requireCurrentUsername();
+const currentNicknameAuth = requireCurrentNickname();
 const users = getUsers();
-const currentUserRecord = ensureUserRegistered(currentUsername, users);
+const currentUserRecord = ensureUserRegistered(currentNicknameAuth, users);
 persistUsers(users);
 let forceProfileCompletion = Boolean(currentUserRecord.firstLogin);
 
@@ -119,11 +122,24 @@ syncUserChip();
 updateMediaInputByType();
 if (forceProfileCompletion) openProfilePanel();
 
-profileForm.addEventListener('submit', (event) => {
+profileForm.addEventListener('submit', async (event) => {
   event.preventDefault();
   const formData = new FormData(profileForm);
   const profile = Object.fromEntries(formData.entries());
   profile.skills = formData.getAll('skills');
+
+  const avatarFile = avatarFileInput.files?.[0];
+  if (avatarFile) {
+    profile.avatar = await fileToDataUrl(avatarFile);
+  } else {
+    profile.avatar = state.profile.avatar || defaultAvatar;
+  }
+
+  if (currentUserRecord.firstLogin && !profile.avatar) {
+    alert('首次登录请上传头像后再继续。');
+    return;
+  }
+
   state.profile = profile;
   if (currentUserRecord.firstLogin) {
     currentUserRecord.firstLogin = false;
@@ -142,7 +158,7 @@ tripForm.addEventListener('submit', (event) => {
   const newTrip = {
     id: crypto.randomUUID(),
     user: currentUserRecord.nickname,
-    avatar: defaultAvatar,
+    avatar: state.profile.avatar || defaultAvatar,
     destination: data.destination.trim(),
     departDate: data.departDate,
     returnDate: data.returnDate,
@@ -283,19 +299,19 @@ mediaList.addEventListener('click', (event) => {
 });
 
 
-function requireCurrentUsername() {
-  const username = localStorage.getItem(CURRENT_USER_KEY);
-  if (!username) {
+function requireCurrentNickname() {
+  const nickname = localStorage.getItem(CURRENT_USER_KEY);
+  if (!nickname) {
     window.location.href = 'register.html';
     throw new Error('No current user');
   }
-  return username;
+  return nickname;
 }
 
-function ensureUserRegistered(username, list) {
-  const found = list.find((user) => user.username === username);
+function ensureUserRegistered(nickname, list) {
+  const found = list.find((user) => user.nickname === nickname);
   if (found) return found;
-  const fallback = { username, nickname: username, password: '123456', firstLogin: false };
+  const fallback = { nickname, password: '123456', firstLogin: false };
   list.push(fallback);
   return fallback;
 }
@@ -306,14 +322,13 @@ function getUsers() {
     if (!Array.isArray(parsed)) return [];
     if (!parsed.length) return [];
     if (typeof parsed[0] === 'string') {
-      return parsed.map((nickname) => ({ username: nickname, nickname, password: '123456', firstLogin: false }));
+      return parsed.map((nickname) => ({ nickname, password: '123456', firstLogin: false }));
     }
     return parsed.map((user) => ({
-      username: user.username,
       nickname: user.nickname || user.username,
       password: user.password || '123456',
       firstLogin: Boolean(user.firstLogin)
-    })).filter((user) => user.username);
+    })).filter((user) => user.nickname);
   } catch {
     return [];
   }
@@ -324,7 +339,7 @@ function persistUsers(list) {
 }
 
 function userStorageKey() {
-  return `${STORAGE_KEY}:${currentUsername}`;
+  return `${STORAGE_KEY}:${currentNicknameAuth}`;
 }
 
 function loadState() {
@@ -338,7 +353,8 @@ function loadState() {
       profile: {
         ...defaultState.profile,
         ...parsed.profile,
-        skills: Array.isArray(parsed.profile?.skills) ? parsed.profile.skills : defaultState.profile.skills
+        skills: Array.isArray(parsed.profile?.skills) ? parsed.profile.skills : defaultState.profile.skills,
+        avatar: parsed.profile?.avatar || defaultState.profile.avatar
       },
       actions: { ...defaultState.actions, ...parsed.actions },
       mediaPosts: (Array.isArray(parsed.mediaPosts) ? parsed.mediaPosts : defaultState.mediaPosts).map((post) => ({
@@ -368,7 +384,7 @@ function persist() { localStorage.setItem(userStorageKey(), JSON.stringify(state
 
 function hydrateProfile() {
   Object.entries(state.profile).forEach(([key, value]) => {
-    if (key === 'skills') return;
+    if (key === 'skills' || key === 'avatar' || key === 'avatarFile') return;
     const field = profileForm.elements.namedItem(key);
     if (field) field.value = value;
   });
@@ -404,6 +420,7 @@ function closeProfilePanel() {
 function syncUserChip() {
   const age = calculateAge(state.profile.birthday);
   currentNickname.textContent = currentUserRecord.nickname;
+  headerAvatar.src = state.profile.avatar || defaultAvatar;
   profileToggle.querySelector('small').textContent = `${state.profile.mbti} · ${state.profile.zodiac} · ${age}岁 · ${(state.profile.skills || []).length}技能`;
 }
 

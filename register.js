@@ -8,36 +8,29 @@ registerForm.addEventListener('submit', (event) => {
   event.preventDefault();
   const form = new FormData(registerForm);
   const nickname = String(form.get('nickname') || '').trim();
-  const username = String(form.get('username') || '').trim();
   const password = String(form.get('password') || '').trim();
-  if (!nickname || !username || !password) return;
+  if (!nickname || !password) return;
 
   const users = getUsers();
-  const existingByUsername = users.find((user) => user.username === username);
+  const existing = users.find((user) => user.nickname === nickname);
 
-  if (existingByUsername) {
-    if (existingByUsername.password !== password) {
-      message.textContent = '账号已存在，但密码错误。';
+  if (existing) {
+    if (existing.password !== password) {
+      message.textContent = '昵称已存在，但密码错误。';
       return;
     }
-    localStorage.setItem(CURRENT_USER_KEY, existingByUsername.username);
+    localStorage.setItem(CURRENT_USER_KEY, existing.nickname);
     window.location.href = 'index.html';
     return;
   }
 
-  if (users.some((user) => user.nickname === nickname)) {
-    message.textContent = '昵称已被使用，请换一个昵称。';
-    return;
-  }
-
   users.push({
-    username,
-    password,
     nickname,
+    password,
     firstLogin: true
   });
   localStorage.setItem(USERS_KEY, JSON.stringify(users));
-  localStorage.setItem(CURRENT_USER_KEY, username);
+  localStorage.setItem(CURRENT_USER_KEY, nickname);
   window.location.href = 'index.html';
 });
 
@@ -49,19 +42,19 @@ function getUsers() {
 
     if (typeof parsed[0] === 'string') {
       return parsed.map((nickname) => ({
-        username: nickname,
         nickname,
         password: '123456',
         firstLogin: false
       }));
     }
 
-    return parsed.map((user) => ({
-      username: user.username,
-      nickname: user.nickname || user.username,
-      password: user.password || '123456',
-      firstLogin: Boolean(user.firstLogin)
-    })).filter((user) => user.username);
+    return parsed
+      .map((user) => ({
+        nickname: user.nickname || user.username,
+        password: user.password || '123456',
+        firstLogin: Boolean(user.firstLogin)
+      }))
+      .filter((user) => user.nickname);
   } catch {
     return [];
   }
