@@ -16,20 +16,13 @@
           <a href="#">行程广场</a>
           <a href="#">旅行社区</a>
         </nav>
-        <div class="account-wrap">
-          <button id="profileToggle" class="user-chip" type="button" aria-expanded="false">
-            <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=200&q=80" alt="用户头像" />
-            <span>
-              <strong id="currentNickname">旅行喵喵</strong>
-              <small>个人资料</small>
-            </span>
-          </button>
-          <button id="accountMenuBtn" class="ghost" type="button">账户 ▾</button>
-          <div id="accountMenu" class="account-menu" hidden>
-            <button id="switchAccountBtn" type="button">切换账户</button>
-            <button id="logoutBtn" type="button" class="danger">注销登录</button>
-          </div>
-        </div>
+        <button id="profileToggle" class="user-chip" type="button" aria-expanded="false">
+          <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=200&q=80" alt="用户头像" />
+          <span>
+            <strong id="currentNickname">旅行喵喵</strong>
+            <small>个人资料</small>
+          </span>
+        </button>
       </div>
     </header>
 
@@ -44,6 +37,10 @@
         <button id="panelClose" class="ghost" type="button">关闭</button>
       </div>
       <p class="hint">仅保留必要资料：生日 / MBTI / 星座 / 技能标签 + 旅行偏好。</p>
+      <div class="account-actions">
+        <button id="switchAccountBtn" type="button" class="ghost">切换账户</button>
+        <button id="logoutBtn" type="button" class="danger">注销登录</button>
+      </div>
       <form id="profileForm" class="grid">
         <label>生日 <input required type="date" name="birthday" /></label>
         <label>MBTI

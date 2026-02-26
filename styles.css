@@ -56,30 +56,6 @@ body {
 .user-chip small { color: #dbeafe; font-size: .76rem; }
 
 
-.account-wrap {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: .45rem;
-}
-.account-menu {
-  position: absolute;
-  right: 0;
-  top: calc(100% + .4rem);
-  background: #fff;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  box-shadow: 0 12px 30px rgba(15, 23, 42, .2);
-  padding: .45rem;
-  display: grid;
-  gap: .35rem;
-  min-width: 140px;
-}
-.account-menu button {
-  text-align: left;
-  padding: .45rem .6rem;
-}
-
 .auth-page {
   min-height: 100vh;
   display: grid;
@@ -129,6 +105,14 @@ body {
   gap: .6rem;
 }
 .panel-head h2 { margin: 0; font-size: 1.12rem; }
+.account-actions {
+  display: flex;
+  gap: .5rem;
+  margin: .4rem 0 .8rem;
+}
+.account-actions button {
+  padding: .45rem .65rem;
+}
 
 .layout {
   max-width: 1200px;

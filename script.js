@@ -17,8 +17,6 @@ const sortFilter = document.querySelector('#sortFilter');
 const seedBtn = document.querySelector('#seedBtn');
 const profileToggle = document.querySelector('#profileToggle');
 const currentNickname = document.querySelector('#currentNickname');
-const accountMenuBtn = document.querySelector('#accountMenuBtn');
-const accountMenu = document.querySelector('#accountMenu');
 const switchAccountBtn = document.querySelector('#switchAccountBtn');
 const logoutBtn = document.querySelector('#logoutBtn');
 const profilePanel = document.querySelector('#profilePanel');
@@ -220,22 +218,14 @@ document.addEventListener('click', (event) => {
   closeProfilePanel();
 });
 
-document.addEventListener('click', (event) => {
-  if (accountMenu.hidden) return;
-  if (accountMenu.contains(event.target) || accountMenuBtn.contains(event.target)) return;
-  accountMenu.hidden = true;
-});
-
-accountMenuBtn.addEventListener('click', (event) => {
-  event.stopPropagation();
-  accountMenu.hidden = !accountMenu.hidden;
-});
 
 switchAccountBtn.addEventListener('click', () => {
+  closeProfilePanel();
   window.location.href = 'register.html';
 });
 
 logoutBtn.addEventListener('click', () => {
+  closeProfilePanel();
   localStorage.removeItem(CURRENT_USER_KEY);
   window.location.href = 'register.html';
 });
