@@ -12,8 +12,8 @@
         <p class="tag">Beta 社区原型</p>
         <h1>先把「找搭子」做靠谱：筛人、评测、快配对</h1>
         <p>
-          发布行程后，系统会按你的旅行风格、预算节奏、作息偏好给出匹配分，
-          让你更快找到合拍搭子，而不是盲等评论私聊。
+          个人资料在注册时填写，后续可随时修改；匹配区支持按 MBTI / 星座筛选，
+          帮你快速找到节奏契合又聊得来的旅行搭子。
         </p>
       </div>
       <button id="seedBtn" class="secondary">重置示例数据</button>
@@ -21,8 +21,51 @@
 
     <main class="layout">
       <section class="card">
-        <h2>1) 我的旅行偏好（用于打分）</h2>
+        <h2>1) 注册资料（可后续修改）</h2>
+        <p class="hint">仅保留必要信息：生日、MBTI、星座 + 旅行偏好。</p>
         <form id="profileForm" class="grid">
+          <label>
+            生日
+            <input required type="date" name="birthday" />
+          </label>
+          <label>
+            MBTI
+            <select name="mbti">
+              <option value="ENFP">ENFP</option>
+              <option value="ENFJ">ENFJ</option>
+              <option value="ENTP">ENTP</option>
+              <option value="ENTJ">ENTJ</option>
+              <option value="INFP">INFP</option>
+              <option value="INFJ">INFJ</option>
+              <option value="INTP">INTP</option>
+              <option value="INTJ">INTJ</option>
+              <option value="ESFP">ESFP</option>
+              <option value="ESFJ">ESFJ</option>
+              <option value="ESTP">ESTP</option>
+              <option value="ESTJ">ESTJ</option>
+              <option value="ISFP">ISFP</option>
+              <option value="ISFJ">ISFJ</option>
+              <option value="ISTP">ISTP</option>
+              <option value="ISTJ">ISTJ</option>
+            </select>
+          </label>
+          <label>
+            星座
+            <select name="zodiac">
+              <option value="白羊座">白羊座</option>
+              <option value="金牛座">金牛座</option>
+              <option value="双子座">双子座</option>
+              <option value="巨蟹座">巨蟹座</option>
+              <option value="狮子座">狮子座</option>
+              <option value="处女座">处女座</option>
+              <option value="天秤座">天秤座</option>
+              <option value="天蝎座">天蝎座</option>
+              <option value="射手座">射手座</option>
+              <option value="摩羯座">摩羯座</option>
+              <option value="水瓶座">水瓶座</option>
+              <option value="双鱼座">双鱼座</option>
+            </select>
+          </label>
           <label>
             旅行节奏
             <select name="pace">
@@ -55,7 +98,7 @@
               <option value="安静">安静</option>
             </select>
           </label>
-          <button type="submit">保存偏好</button>
+          <button type="submit">保存资料</button>
         </form>
       </section>
 
@@ -105,8 +148,14 @@
             <option value="平衡">平衡</option>
             <option value="慢游">慢游</option>
           </select>
+          <select id="mbtiFilter">
+            <option value="all">全部 MBTI</option>
+          </select>
+          <select id="zodiacFilter">
+            <option value="all">全部星座</option>
+          </select>
         </div>
-        <p class="hint">点击「喜欢 / 不喜欢 / 收藏」即可沉淀偏好画像，后续推荐会更准。</p>
+        <p class="hint">可按 MBTI / 星座筛选搭子，卡片展示对方年龄、MBTI、星座。</p>
         <div id="tripList" class="cards"></div>
       </section>
 

@@ -70,6 +70,7 @@ button.danger { background: var(--danger); }
 button.ghost { background: #eef2ff; color: #1f2a6f; }
 .toolbar {
   display: flex;
+  flex-wrap: wrap;
   gap: .6rem;
   margin-bottom: .5rem;
 }

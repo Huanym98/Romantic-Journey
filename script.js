@@ -7,6 +7,8 @@ const mediaTemplate = document.querySelector('#mediaTemplate');
 const mediaList = document.querySelector('#mediaList');
 const searchInput = document.querySelector('#searchInput');
 const styleFilter = document.querySelector('#styleFilter');
+const mbtiFilter = document.querySelector('#mbtiFilter');
+const zodiacFilter = document.querySelector('#zodiacFilter');
 const seedBtn = document.querySelector('#seedBtn');
 const statsBox = document.querySelector('#stats');
 const countryList = document.querySelector('#countryList');
@@ -26,6 +28,7 @@ const sampleTrips = [
     pace: '平衡',
     wakeUp: '自然醒',
     social: '适中',
+    profile: { birthday: '1998-07-14', mbti: 'ENFP', zodiac: '巨蟹座' },
     trust: { score: 4.8, completion: 96, verified: true }
   },
   {
@@ -39,6 +42,7 @@ const sampleTrips = [
     pace: '特种兵式',
     wakeUp: '早起',
     social: '外向',
+    profile: { birthday: '1995-11-02', mbti: 'ENTJ', zodiac: '天蝎座' },
     trust: { score: 4.4, completion: 91, verified: true }
   },
   {
@@ -52,6 +56,7 @@ const sampleTrips = [
     pace: '慢游',
     wakeUp: '夜猫',
     social: '安静',
+    profile: { birthday: '1999-02-24', mbti: 'INFJ', zodiac: '双鱼座' },
     trust: { score: 4.9, completion: 98, verified: true }
   }
 ];
@@ -74,7 +79,15 @@ const sampleMedia = [
 ];
 
 const defaultState = {
-  profile: { pace: '平衡', budgetLevel: '舒适', wakeUp: '自然醒', social: '适中' },
+  profile: {
+    birthday: '1998-01-01',
+    mbti: 'ENFP',
+    zodiac: '摩羯座',
+    pace: '平衡',
+    budgetLevel: '舒适',
+    wakeUp: '自然醒',
+    social: '适中'
+  },
   trips: sampleTrips,
   mediaPosts: sampleMedia,
   actions: { like: [], dislike: [], save: [], connect: [] }
@@ -82,6 +95,7 @@ const defaultState = {
 
 let state = loadState();
 hydrateProfile();
+hydratePersonaFilters();
 render();
 
 profileForm.addEventListener('submit', (event) => {
@@ -106,10 +120,16 @@ tripForm.addEventListener('submit', (event) => {
     pace: data.pace,
     wakeUp: data.wakeUp,
     social: data.social,
+    profile: {
+      birthday: state.profile.birthday,
+      mbti: state.profile.mbti,
+      zodiac: state.profile.zodiac
+    },
     trust: { score: 5.0, completion: 100, verified: false }
   };
   state.trips = [newTrip, ...state.trips];
   tripForm.reset();
+  hydratePersonaFilters();
   persist();
   render();
 });
@@ -134,12 +154,15 @@ mediaForm.addEventListener('submit', (event) => {
 seedBtn.addEventListener('click', () => {
   state = structuredClone(defaultState);
   hydrateProfile();
+  hydratePersonaFilters();
   persist();
   render();
 });
 
 searchInput.addEventListener('input', render);
 styleFilter.addEventListener('change', render);
+mbtiFilter.addEventListener('change', render);
+zodiacFilter.addEventListener('change', render);
 
 tripList.addEventListener('click', (event) => {
   const button = event.target.closest('button[data-action]');
@@ -193,15 +216,37 @@ function hydrateProfile() {
   });
 }
 
+function hydratePersonaFilters() {
+  const mbtiValues = [...new Set(state.trips.map((trip) => trip.profile?.mbti).filter(Boolean))].sort();
+  const zodiacValues = [...new Set(state.trips.map((trip) => trip.profile?.zodiac).filter(Boolean))].sort();
+
+  fillSelect(mbtiFilter, '全部 MBTI', mbtiValues);
+  fillSelect(zodiacFilter, '全部星座', zodiacValues);
+}
+
+function fillSelect(select, defaultLabel, values) {
+  const previous = select.value;
+  select.innerHTML = `<option value="all">${defaultLabel}</option>`;
+  values.forEach((value) => {
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = value;
+    select.append(option);
+  });
+  select.value = values.includes(previous) ? previous : 'all';
+}
+
 function matchScore(trip) {
   let score = 40;
-  if (trip.pace === state.profile.pace) score += 25;
-  if (trip.wakeUp === state.profile.wakeUp) score += 15;
-  if (trip.social === state.profile.social) score += 15;
+  if (trip.pace === state.profile.pace) score += 20;
+  if (trip.wakeUp === state.profile.wakeUp) score += 12;
+  if (trip.social === state.profile.social) score += 12;
+  if (trip.profile?.mbti === state.profile.mbti) score += 8;
+  if (trip.profile?.zodiac === state.profile.zodiac) score += 6;
 
   const budgetDelta = Math.abs(levelBudget(state.profile.budgetLevel) - trip.budget);
-  if (budgetDelta <= 1000) score += 10;
-  else if (budgetDelta <= 2500) score += 5;
+  if (budgetDelta <= 1000) score += 8;
+  else if (budgetDelta <= 2500) score += 4;
 
   if (state.actions.like.includes(trip.id)) score += 5;
   if (state.actions.dislike.includes(trip.id)) score -= 20;
@@ -218,9 +263,14 @@ function levelBudget(level) {
 function render() {
   const keyword = searchInput.value.trim();
   const style = styleFilter.value;
+  const mbti = mbtiFilter.value;
+  const zodiac = zodiacFilter.value;
+
   const trips = state.trips
     .filter((trip) => (keyword ? trip.destination.includes(keyword) : true))
     .filter((trip) => (style === 'all' ? true : trip.pace === style))
+    .filter((trip) => (mbti === 'all' ? true : trip.profile?.mbti === mbti))
+    .filter((trip) => (zodiac === 'all' ? true : trip.profile?.zodiac === zodiac))
     .sort((a, b) => matchScore(b) - matchScore(a));
 
   tripList.innerHTML = '';
@@ -241,9 +291,19 @@ function render() {
     spots.textContent = `想去：${trip.spots.join('、')}`;
     trust.textContent = `信用评分 ${trip.trust.score} ｜守约率 ${trip.trust.completion}% ｜${trip.trust.verified ? '实名认证' : '待认证'}`;
 
-    ['pace', 'wakeUp', 'social'].forEach((key) => {
+    const age = trip.profile?.birthday ? `${calculateAge(trip.profile.birthday)} 岁` : '年龄未知';
+    const profileChips = [
+      `年龄: ${age}`,
+      `MBTI: ${trip.profile?.mbti || '未填写'}`,
+      `星座: ${trip.profile?.zodiac || '未填写'}`,
+      `节奏: ${trip.pace}`,
+      `作息: ${trip.wakeUp}`,
+      `社交: ${trip.social}`
+    ];
+
+    profileChips.forEach((text) => {
       const li = document.createElement('li');
-      li.textContent = `${key === 'pace' ? '节奏' : key === 'wakeUp' ? '作息' : '社交'}: ${trip[key]}`;
+      li.textContent = text;
       chips.append(li);
     });
 
@@ -261,6 +321,15 @@ function render() {
   renderMedia();
   renderCountries();
   renderBadges();
+}
+
+function calculateAge(birthday) {
+  const birth = new Date(birthday);
+  const now = new Date();
+  let age = now.getFullYear() - birth.getFullYear();
+  const monthDiff = now.getMonth() - birth.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < birth.getDate())) age -= 1;
+  return Math.max(0, age);
 }
 
 function renderStats() {
