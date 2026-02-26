@@ -3,27 +3,28 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Romantic Journey · 注册账户</title>
+    <title>Romantic Journey · 登录 / 注册</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body class="auth-page">
     <main class="auth-card">
       <img src="assets/logo.svg" alt="浪漫之旅 Logo" class="auth-logo" />
-      <h1>首次登录 · 创建账户</h1>
-      <p class="hint">先用昵称跑通注册流程（无需手机号、邮箱、微信、QQ）。</p>
+      <h1>账号登录 / 注册</h1>
+      <p class="hint">输入昵称、账号和密码后，系统会自动判断是新注册还是已有账号登录。</p>
 
       <form id="registerForm" class="grid auth-form">
-        <label class="full-width">昵称（不可重复）
-          <input name="nickname" required placeholder="输入你的昵称，例如：旅行喵喵" maxlength="20" />
+        <label class="full-width">昵称（展示名，需唯一）
+          <input name="nickname" required placeholder="输入昵称，例如：旅行喵喵" maxlength="20" />
         </label>
-        <button type="submit">注册并进入首页</button>
+        <label>账号
+          <input name="username" required placeholder="输入账号，例如：mia001" maxlength="32" />
+        </label>
+        <label>密码
+          <input name="password" required type="password" placeholder="输入密码" maxlength="64" />
+        </label>
+        <button type="submit">继续</button>
       </form>
       <p id="registerMessage" class="hint"></p>
-
-      <section>
-        <h2>已有账户</h2>
-        <div id="accountList" class="account-list"></div>
-      </section>
     </main>
 
     <script src="register.js"></script>

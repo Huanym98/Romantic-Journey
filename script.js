@@ -105,8 +105,11 @@ const defaultState = {
   actions: { like: [], dislike: [], save: [], connect: [] }
 };
 
-const currentUser = requireCurrentUser();
-ensureUserRegistered(currentUser);
+const currentUsername = requireCurrentUsername();
+const users = getUsers();
+const currentUserRecord = ensureUserRegistered(currentUsername, users);
+persistUsers(users);
+let forceProfileCompletion = Boolean(currentUserRecord.firstLogin);
 
 let state = loadState();
 hydrateProfile();
@@ -114,7 +117,7 @@ hydratePersonaFilters();
 render();
 syncUserChip();
 updateMediaInputByType();
-
+if (forceProfileCompletion) openProfilePanel();
 
 profileForm.addEventListener('submit', (event) => {
   event.preventDefault();
@@ -122,6 +125,11 @@ profileForm.addEventListener('submit', (event) => {
   const profile = Object.fromEntries(formData.entries());
   profile.skills = formData.getAll('skills');
   state.profile = profile;
+  if (currentUserRecord.firstLogin) {
+    currentUserRecord.firstLogin = false;
+    forceProfileCompletion = false;
+    persistUsers(users);
+  }
   persist();
   render();
   syncUserChip();
@@ -133,7 +141,7 @@ tripForm.addEventListener('submit', (event) => {
   const data = Object.fromEntries(new FormData(tripForm).entries());
   const newTrip = {
     id: crypto.randomUUID(),
-    user: currentUser,
+    user: currentUserRecord.nickname,
     avatar: defaultAvatar,
     destination: data.destination.trim(),
     departDate: data.departDate,
@@ -275,34 +283,48 @@ mediaList.addEventListener('click', (event) => {
 });
 
 
-function requireCurrentUser() {
-  const name = localStorage.getItem(CURRENT_USER_KEY);
-  if (!name) {
+function requireCurrentUsername() {
+  const username = localStorage.getItem(CURRENT_USER_KEY);
+  if (!username) {
     window.location.href = 'register.html';
     throw new Error('No current user');
   }
-  return name;
+  return username;
 }
 
-function ensureUserRegistered(name) {
-  const users = getUsers();
-  if (!users.includes(name)) {
-    users.push(name);
-    localStorage.setItem(USERS_KEY, JSON.stringify(users));
-  }
+function ensureUserRegistered(username, list) {
+  const found = list.find((user) => user.username === username);
+  if (found) return found;
+  const fallback = { username, nickname: username, password: '123456', firstLogin: false };
+  list.push(fallback);
+  return fallback;
 }
 
 function getUsers() {
   try {
     const parsed = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
-    return Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed)) return [];
+    if (!parsed.length) return [];
+    if (typeof parsed[0] === 'string') {
+      return parsed.map((nickname) => ({ username: nickname, nickname, password: '123456', firstLogin: false }));
+    }
+    return parsed.map((user) => ({
+      username: user.username,
+      nickname: user.nickname || user.username,
+      password: user.password || '123456',
+      firstLogin: Boolean(user.firstLogin)
+    })).filter((user) => user.username);
   } catch {
     return [];
   }
 }
 
+function persistUsers(list) {
+  localStorage.setItem(USERS_KEY, JSON.stringify(list));
+}
+
 function userStorageKey() {
-  return `${STORAGE_KEY}:${currentUser}`;
+  return `${STORAGE_KEY}:${currentUsername}`;
 }
 
 function loadState() {
@@ -373,11 +395,15 @@ function fillSelect(select, defaultLabel, values) {
 
 function toggleProfilePanel() { profilePanel.hidden ? openProfilePanel() : closeProfilePanel(); }
 function openProfilePanel() { profilePanel.hidden = false; profileToggle.setAttribute('aria-expanded', 'true'); }
-function closeProfilePanel() { profilePanel.hidden = true; profileToggle.setAttribute('aria-expanded', 'false'); }
+function closeProfilePanel() {
+  if (forceProfileCompletion) return;
+  profilePanel.hidden = true;
+  profileToggle.setAttribute('aria-expanded', 'false');
+}
 
 function syncUserChip() {
   const age = calculateAge(state.profile.birthday);
-  currentNickname.textContent = currentUser;
+  currentNickname.textContent = currentUserRecord.nickname;
   profileToggle.querySelector('small').textContent = `${state.profile.mbti} · ${state.profile.zodiac} · ${age}岁 · ${(state.profile.skills || []).length}技能`;
 }
 

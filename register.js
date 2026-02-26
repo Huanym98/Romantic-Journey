@@ -2,51 +2,67 @@ const USERS_KEY = 'romanticJourneyUsers';
 const CURRENT_USER_KEY = 'romanticJourneyCurrentUser';
 
 const registerForm = document.querySelector('#registerForm');
-const accountList = document.querySelector('#accountList');
 const message = document.querySelector('#registerMessage');
-
-renderAccounts();
 
 registerForm.addEventListener('submit', (event) => {
   event.preventDefault();
-  const nickname = String(new FormData(registerForm).get('nickname') || '').trim();
-  if (!nickname) return;
+  const form = new FormData(registerForm);
+  const nickname = String(form.get('nickname') || '').trim();
+  const username = String(form.get('username') || '').trim();
+  const password = String(form.get('password') || '').trim();
+  if (!nickname || !username || !password) return;
 
   const users = getUsers();
-  if (users.includes(nickname)) {
-    message.textContent = '昵称已存在，请换一个昵称。';
+  const existingByUsername = users.find((user) => user.username === username);
+
+  if (existingByUsername) {
+    if (existingByUsername.password !== password) {
+      message.textContent = '账号已存在，但密码错误。';
+      return;
+    }
+    localStorage.setItem(CURRENT_USER_KEY, existingByUsername.username);
+    window.location.href = 'index.html';
     return;
   }
 
-  users.push(nickname);
-  localStorage.setItem(USERS_KEY, JSON.stringify(users));
-  localStorage.setItem(CURRENT_USER_KEY, nickname);
-  window.location.href = 'index.html';
-});
+  if (users.some((user) => user.nickname === nickname)) {
+    message.textContent = '昵称已被使用，请换一个昵称。';
+    return;
+  }
 
-accountList.addEventListener('click', (event) => {
-  const button = event.target.closest('button[data-user]');
-  if (!button) return;
-  localStorage.setItem(CURRENT_USER_KEY, button.dataset.user);
+  users.push({
+    username,
+    password,
+    nickname,
+    firstLogin: true
+  });
+  localStorage.setItem(USERS_KEY, JSON.stringify(users));
+  localStorage.setItem(CURRENT_USER_KEY, username);
   window.location.href = 'index.html';
 });
 
 function getUsers() {
   try {
     const parsed = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
-    return Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed)) return [];
+    if (!parsed.length) return [];
+
+    if (typeof parsed[0] === 'string') {
+      return parsed.map((nickname) => ({
+        username: nickname,
+        nickname,
+        password: '123456',
+        firstLogin: false
+      }));
+    }
+
+    return parsed.map((user) => ({
+      username: user.username,
+      nickname: user.nickname || user.username,
+      password: user.password || '123456',
+      firstLogin: Boolean(user.firstLogin)
+    })).filter((user) => user.username);
   } catch {
     return [];
   }
-}
-
-function renderAccounts() {
-  const users = getUsers();
-  if (!users.length) {
-    accountList.innerHTML = '<p class="hint">暂无账户，请先注册一个昵称。</p>';
-    return;
-  }
-  accountList.innerHTML = users
-    .map((name) => `<button data-user="${name}" type="button">进入：${name}</button>`)
-    .join('');
 }
