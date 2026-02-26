@@ -1,6 +1,10 @@
 const profileForm = document.querySelector('#profileForm');
 const tripForm = document.querySelector('#tripForm');
 const mediaForm = document.querySelector('#mediaForm');
+const mediaType = document.querySelector('#mediaType');
+const coverFileInput = document.querySelector('#coverFile');
+const checkinInput = document.querySelector('#checkinInput');
+const checkinNowBtn = document.querySelector('#checkinNowBtn');
 const tripList = document.querySelector('#tripList');
 const tripTemplate = document.querySelector('#tripTemplate');
 const mediaTemplate = document.querySelector('#mediaTemplate');
@@ -74,7 +78,9 @@ const sampleMedia = [
     type: '图片',
     location: '瑞士',
     cover: 'https://images.unsplash.com/photo-1530122037265-a5f1f91d3b99?auto=format&fit=crop&w=800&q=80',
-    caption: '雪山火车窗景'
+    caption: '雪山火车窗景',
+    createdAt: '2026-02-22T08:30:00.000Z',
+    checkin: '瑞士·少女峰观景台 · 2026-02-22 08:30'
   }
 ];
 
@@ -99,6 +105,7 @@ hydrateProfile();
 hydratePersonaFilters();
 render();
 syncUserChip();
+updateMediaInputByType();
 
 profileForm.addEventListener('submit', (event) => {
   event.preventDefault();
@@ -153,20 +160,33 @@ tripForm.addEventListener('submit', (event) => {
 mediaForm.addEventListener('submit', async (event) => {
   event.preventDefault();
   const formData = new FormData(mediaForm);
-  const file = formData.get('coverFile');
-  if (!file || file.size === 0) return;
+  const files = Array.from(coverFileInput.files || []);
+  if (!files.length) return;
 
-  const cover = await fileToDataUrl(file);
-  const newMedia = {
-    id: crypto.randomUUID(),
-    type: formData.get('type'),
-    location: String(formData.get('location')).trim(),
-    cover,
-    caption: String(formData.get('caption')).trim()
-  };
+  const type = String(formData.get('type'));
+  const location = String(formData.get('location')).trim();
+  const checkin = String(formData.get('checkin') || '').trim();
+  const caption = String(formData.get('caption')).trim();
 
-  state.mediaPosts = [newMedia, ...state.mediaPosts].slice(0, 12);
+  const allowed = type === '视频' ? files.filter((file) => file.type.startsWith('video/')) : files.filter((file) => file.type.startsWith('image/'));
+  if (!allowed.length) return;
+
+  const payload = [];
+  for (const [index, file] of allowed.entries()) {
+    payload.push({
+      id: crypto.randomUUID(),
+      type,
+      location,
+      cover: await fileToDataUrl(file),
+      caption: type === '图片' && allowed.length > 1 ? `${caption} · ${index + 1}` : caption,
+      createdAt: new Date().toISOString(),
+      checkin: checkin || `${location} · ${formatTime(new Date().toISOString())}`
+    });
+  }
+
+  state.mediaPosts = [...payload, ...state.mediaPosts].slice(0, 20);
   mediaForm.reset();
+  updateMediaInputByType();
   persist();
   render();
 });
@@ -187,6 +207,12 @@ document.addEventListener('click', (event) => {
   if (profilePanel.hidden) return;
   if (profilePanel.contains(event.target) || profileToggle.contains(event.target)) return;
   closeProfilePanel();
+});
+
+mediaType.addEventListener('change', updateMediaInputByType);
+checkinNowBtn.addEventListener('click', () => {
+  const location = checkinInput.value.trim() || String(mediaForm.elements.namedItem('location').value || '未命名地点');
+  checkinInput.value = `${location} · ${formatTime(new Date().toISOString())}`;
 });
 
 [searchInput, styleFilter, mbtiFilter, zodiacFilter, sortFilter].forEach((el) => el.addEventListener('input', render));
@@ -241,7 +267,11 @@ function loadState() {
         skills: Array.isArray(parsed.profile?.skills) ? parsed.profile.skills : defaultState.profile.skills
       },
       actions: { ...defaultState.actions, ...parsed.actions },
-      mediaPosts: Array.isArray(parsed.mediaPosts) ? parsed.mediaPosts : defaultState.mediaPosts,
+      mediaPosts: (Array.isArray(parsed.mediaPosts) ? parsed.mediaPosts : defaultState.mediaPosts).map((post) => ({
+        ...post,
+        createdAt: post.createdAt || new Date().toISOString(),
+        checkin: post.checkin || `${post.location || '未知地点'} · ${formatTime(new Date().toISOString())}`
+      })),
       trips: (Array.isArray(parsed.trips) ? parsed.trips : defaultState.trips).map((trip) => ({
         ...trip,
         tags: Array.isArray(trip.tags) ? trip.tags : [],
@@ -413,7 +443,8 @@ function renderMedia() {
     article.dataset.id = post.id;
     fragment.querySelector('img').src = post.cover;
     fragment.querySelector('.media-title').textContent = post.caption;
-    fragment.querySelector('.media-meta').textContent = `${post.type} · ${post.location}`;
+    fragment.querySelector('.media-meta').textContent = `${post.type} · ${post.location} · 创建于 ${formatTime(post.createdAt)}`;
+    fragment.querySelector('.media-checkin').textContent = `📍 打卡：${post.checkin || '未打卡'}`;
     mediaList.append(fragment);
   });
 }
@@ -434,6 +465,17 @@ function renderBadges() {
   badgeList.innerHTML = unlocked.length
     ? unlocked.map(([name, desc]) => `<article class="badge-item"><h4>${name}</h4><p>${desc}</p></article>`).join('')
     : '<p class="hint">完成互动后可解锁你的旅行勋章。</p>';
+}
+
+function updateMediaInputByType() {
+  const type = mediaType.value;
+  if (type === '视频') {
+    coverFileInput.accept = 'video/*';
+    coverFileInput.multiple = false;
+  } else {
+    coverFileInput.accept = 'image/*';
+    coverFileInput.multiple = true;
+  }
 }
 
 function toList(value) { return String(value).split(',').map((item) => item.trim()).filter(Boolean); }

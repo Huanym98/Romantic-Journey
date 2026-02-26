@@ -176,6 +176,25 @@ textarea {
   resize: vertical;
   min-height: 96px;
 }
+
+input[type="file"] {
+  padding: .45rem;
+  background: #f8fafc;
+}
+input[type="file"]::file-selector-button {
+  margin-right: .7rem;
+  border: none;
+  border-radius: 8px;
+  padding: .45rem .75rem;
+  font: inherit;
+  color: #fff;
+  background: linear-gradient(120deg, #14b8a6, #2563eb);
+  cursor: pointer;
+}
+input[type="file"]::file-selector-button:hover {
+  opacity: .92;
+}
+.media-checkin { margin: .2rem 0 0; color: #475569; font-size: .84rem; }
 .publish, .itinerary { color: var(--muted); margin: .3rem 0; }
 
 .author-row {

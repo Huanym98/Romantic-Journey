@@ -118,9 +118,11 @@
           <section>
             <h3>旅行记忆墙（图片 / 视频）</h3>
             <form id="mediaForm" class="grid media-form">
-              <label>内容类型 <select name="type"><option value="图片">图片</option><option value="视频">视频</option></select></label>
+              <label>内容类型 <select id="mediaType" name="type"><option value="图片">图片</option><option value="视频">视频</option></select></label>
               <label>目的地 <input required name="location" placeholder="例如：冰岛" /></label>
-              <label>上传封面图片 <input required type="file" name="coverFile" accept="image/*" /></label>
+              <label>地点打卡 <input id="checkinInput" name="checkin" placeholder="例如：东京塔 观景台" /></label>
+              <label>上传内容 <input id="coverFile" type="file" name="coverFile" accept="image/*" multiple /></label>
+              <label class="full-width"><button id="checkinNowBtn" type="button" class="ghost">📍 一键打卡当前时间</button></label>
               <label>标题 <input required name="caption" placeholder="极光追逐日记" /></label>
               <button type="submit">发布到主页</button>
             </form>
@@ -168,6 +170,7 @@
         <div>
           <p class="media-title"></p>
           <p class="media-meta"></p>
+          <p class="media-checkin"></p>
           <button class="danger media-delete" data-action="delete-media" type="button">删除</button>
         </div>
       </article>
