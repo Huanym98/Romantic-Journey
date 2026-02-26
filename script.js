@@ -16,6 +16,11 @@ const zodiacFilter = document.querySelector('#zodiacFilter');
 const sortFilter = document.querySelector('#sortFilter');
 const seedBtn = document.querySelector('#seedBtn');
 const profileToggle = document.querySelector('#profileToggle');
+const currentNickname = document.querySelector('#currentNickname');
+const accountMenuBtn = document.querySelector('#accountMenuBtn');
+const accountMenu = document.querySelector('#accountMenu');
+const switchAccountBtn = document.querySelector('#switchAccountBtn');
+const logoutBtn = document.querySelector('#logoutBtn');
 const profilePanel = document.querySelector('#profilePanel');
 const panelClose = document.querySelector('#panelClose');
 const statsBox = document.querySelector('#stats');
@@ -23,6 +28,8 @@ const countryList = document.querySelector('#countryList');
 const badgeList = document.querySelector('#badgeList');
 
 const STORAGE_KEY = 'romanticJourneyState';
+const USERS_KEY = 'romanticJourneyUsers';
+const CURRENT_USER_KEY = 'romanticJourneyCurrentUser';
 const defaultAvatar = 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=160&q=80';
 
 const sampleTrips = [
@@ -100,12 +107,16 @@ const defaultState = {
   actions: { like: [], dislike: [], save: [], connect: [] }
 };
 
+const currentUser = requireCurrentUser();
+ensureUserRegistered(currentUser);
+
 let state = loadState();
 hydrateProfile();
 hydratePersonaFilters();
 render();
 syncUserChip();
 updateMediaInputByType();
+
 
 profileForm.addEventListener('submit', (event) => {
   event.preventDefault();
@@ -124,7 +135,7 @@ tripForm.addEventListener('submit', (event) => {
   const data = Object.fromEntries(new FormData(tripForm).entries());
   const newTrip = {
     id: crypto.randomUUID(),
-    user: '你',
+    user: currentUser,
     avatar: defaultAvatar,
     destination: data.destination.trim(),
     departDate: data.departDate,
@@ -209,6 +220,26 @@ document.addEventListener('click', (event) => {
   closeProfilePanel();
 });
 
+document.addEventListener('click', (event) => {
+  if (accountMenu.hidden) return;
+  if (accountMenu.contains(event.target) || accountMenuBtn.contains(event.target)) return;
+  accountMenu.hidden = true;
+});
+
+accountMenuBtn.addEventListener('click', (event) => {
+  event.stopPropagation();
+  accountMenu.hidden = !accountMenu.hidden;
+});
+
+switchAccountBtn.addEventListener('click', () => {
+  window.location.href = 'register.html';
+});
+
+logoutBtn.addEventListener('click', () => {
+  localStorage.removeItem(CURRENT_USER_KEY);
+  window.location.href = 'register.html';
+});
+
 mediaType.addEventListener('change', updateMediaInputByType);
 checkinNowBtn.addEventListener('click', () => {
   const location = checkinInput.value.trim() || String(mediaForm.elements.namedItem('location').value || '未命名地点');
@@ -253,8 +284,39 @@ mediaList.addEventListener('click', (event) => {
   render();
 });
 
+
+function requireCurrentUser() {
+  const name = localStorage.getItem(CURRENT_USER_KEY);
+  if (!name) {
+    window.location.href = 'register.html';
+    throw new Error('No current user');
+  }
+  return name;
+}
+
+function ensureUserRegistered(name) {
+  const users = getUsers();
+  if (!users.includes(name)) {
+    users.push(name);
+    localStorage.setItem(USERS_KEY, JSON.stringify(users));
+  }
+}
+
+function getUsers() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function userStorageKey() {
+  return `${STORAGE_KEY}:${currentUser}`;
+}
+
 function loadState() {
-  const raw = localStorage.getItem(STORAGE_KEY);
+  const raw = localStorage.getItem(userStorageKey());
   if (!raw) return structuredClone(defaultState);
   try {
     const parsed = JSON.parse(raw);
@@ -290,7 +352,7 @@ function loadState() {
   }
 }
 
-function persist() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+function persist() { localStorage.setItem(userStorageKey(), JSON.stringify(state)); }
 
 function hydrateProfile() {
   Object.entries(state.profile).forEach(([key, value]) => {
@@ -325,6 +387,7 @@ function closeProfilePanel() { profilePanel.hidden = true; profileToggle.setAttr
 
 function syncUserChip() {
   const age = calculateAge(state.profile.birthday);
+  currentNickname.textContent = currentUser;
   profileToggle.querySelector('small').textContent = `${state.profile.mbti} · ${state.profile.zodiac} · ${age}岁 · ${(state.profile.skills || []).length}技能`;
 }
 

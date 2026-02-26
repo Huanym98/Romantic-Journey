@@ -55,6 +55,51 @@ body {
 .user-chip strong { font-size: .92rem; }
 .user-chip small { color: #dbeafe; font-size: .76rem; }
 
+
+.account-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+}
+.account-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + .4rem);
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, .2);
+  padding: .45rem;
+  display: grid;
+  gap: .35rem;
+  min-width: 140px;
+}
+.account-menu button {
+  text-align: left;
+  padding: .45rem .6rem;
+}
+
+.auth-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+}
+.auth-card {
+  width: min(680px, calc(100vw - 2rem));
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 1.2rem;
+}
+.auth-logo { height: 52px; }
+.auth-form { margin: .6rem 0; }
+.account-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+}
+.account-list button { background: #1f2937; }
 .hero-strip {
   max-width: 1200px;
   margin: 1rem auto 0;

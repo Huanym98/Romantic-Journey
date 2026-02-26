@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Romantic Journey · 注册账户</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="auth-page">
+    <main class="auth-card">
+      <img src="assets/logo.svg" alt="浪漫之旅 Logo" class="auth-logo" />
+      <h1>首次登录 · 创建账户</h1>
+      <p class="hint">先用昵称跑通注册流程（无需手机号、邮箱、微信、QQ）。</p>
+
+      <form id="registerForm" class="grid auth-form">
+        <label class="full-width">昵称（不可重复）
+          <input name="nickname" required placeholder="输入你的昵称，例如：旅行喵喵" maxlength="20" />
+        </label>
+        <button type="submit">注册并进入首页</button>
+      </form>
+      <p id="registerMessage" class="hint"></p>
+
+      <section>
+        <h2>已有账户</h2>
+        <div id="accountList" class="account-list"></div>
+      </section>
+    </main>
+
+    <script src="register.js"></script>
+  </body>
+</html>
