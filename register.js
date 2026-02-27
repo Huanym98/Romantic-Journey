@@ -24,6 +24,12 @@ registerForm.addEventListener('submit', (event) => {
     return;
   }
 
+  const complexity = validatePasswordComplexity(password);
+  if (!complexity.ok) {
+    message.textContent = complexity.message;
+    return;
+  }
+
   users.push({
     nickname,
     password,
@@ -58,4 +64,13 @@ function getUsers() {
   } catch {
     return [];
   }
+}
+
+function validatePasswordComplexity(password) {
+  if (password.length < 8) return { ok: false, message: '密码至少 8 位。' };
+  if (!/[A-Z]/.test(password)) return { ok: false, message: '密码需包含大写字母。' };
+  if (!/[a-z]/.test(password)) return { ok: false, message: '密码需包含小写字母。' };
+  if (!/[0-9]/.test(password)) return { ok: false, message: '密码需包含数字。' };
+  if (!/[^A-Za-z0-9]/.test(password)) return { ok: false, message: '密码需包含特殊符号。' };
+  return { ok: true, message: '' };
 }

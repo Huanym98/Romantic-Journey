@@ -16,11 +16,12 @@
         <label class="full-width">昵称（展示名，需唯一）
           <input name="nickname" required placeholder="输入昵称，例如：旅行喵喵" maxlength="20" />
         </label>
-        <label>密码
-          <input name="password" required type="password" placeholder="输入密码" maxlength="64" />
+        <label class="full-width">密码
+          <input name="password" id="passwordInput" required type="password" placeholder="至少8位，含大小写字母+数字+符号" minlength="8" maxlength="64" />
         </label>
         <button type="submit" class="full-width">继续</button>
       </form>
+      <p class="hint">密码复杂度建议：至少8位，包含大写、小写、数字和特殊符号。</p>
       <p id="registerMessage" class="hint"></p>
     </main>
 
