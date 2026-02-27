@@ -133,7 +133,17 @@
       </section>
 
       <section class="card">
-        <h2>4) 我的旅行主页</h2>
+        <h2>4) 消息</h2>
+        <div class="message-tabs">
+          <button id="msgTabChats" class="secondary" type="button">聊天消息</button>
+          <button id="msgTabSystem" class="ghost" type="button">系统消息</button>
+        </div>
+        <div id="messageChats" class="message-panel"></div>
+        <div id="messageSystem" class="message-panel" hidden></div>
+      </section>
+
+      <section class="card">
+        <h2>5) 我的旅行主页</h2>
         <div class="profile-grid">
           <section>
             <h3>旅行记忆墙（图片 / 视频）</h3>
@@ -225,6 +235,13 @@
           <button data-action="save" class="secondary">⭐ 收藏</button>
           <button data-action="connect" class="ghost">💬 私聊意向</button>
         </footer>
+        <section class="trip-comments">
+          <div class="trip-comments-list"></div>
+          <form class="trip-comment-form">
+            <input name="comment" placeholder="写评论，按回车发布" maxlength="120" />
+            <button type="submit" class="ghost">评论</button>
+          </form>
+        </section>
       </article>
     </template>
 
@@ -235,6 +252,7 @@
           <p class="media-title"></p>
           <p class="media-meta"></p>
           <p class="media-checkin"></p>
+          <button class="ghost media-like" data-action="like-media" type="button">👍 赞主页</button>
           <button class="danger media-delete" data-action="delete-media" type="button">删除</button>
         </div>
       </article>

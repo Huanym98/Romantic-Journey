@@ -28,6 +28,10 @@ const logoutBtn = document.querySelector('#logoutBtn');
 const profilePanel = document.querySelector('#profilePanel');
 const panelClose = document.querySelector('#panelClose');
 const statsBox = document.querySelector('#stats');
+const msgTabChats = document.querySelector('#msgTabChats');
+const msgTabSystem = document.querySelector('#msgTabSystem');
+const messageChats = document.querySelector('#messageChats');
+const messageSystem = document.querySelector('#messageSystem');
 const countryList = document.querySelector('#countryList');
 const badgeList = document.querySelector('#badgeList');
 const chatWorkspace = document.querySelector('#chatWorkspace');
@@ -66,25 +70,27 @@ const I18N = {
   'zh-CN': {
     title: 'Romantic Journey · 找旅行搭子', navHome: '首页', navMatch: '找搭子', navSquare: '行程广场', navCommunity: '旅行社区',
     profileSmall: '个人资料', heroTitle: '筛选更精准，结伴更靠谱', heroDesc: '支持行程标签、详细安排、点赞热度、头像信息和口碑评价。',
-    sectionTrip: '1) 发布行程帖', sectionMatch: '2) 快速匹配区', sectionStats: '3) 我的互动记录', sectionHome: '4) 我的旅行主页',
+    sectionTrip: '1) 发布行程帖', sectionMatch: '2) 快速匹配区', sectionStats: '3) 我的互动记录', sectionMessage: '4) 消息', sectionHome: '5) 我的旅行主页',
     plusCreateGroup: '创建群组', chatWorkspaceTitle: '聊天', send: '发送', collapse: '收起',
     statsLike: '点赞', statsSave: '收藏', statsConnect: '私聊意向', statsFollowing: '我关注', statsFriends: '互相关注好友', statsBlocked: '已拉黑', statsChats: '聊天窗口',
     avatarHintDefault: '支持 jpg/png/webp，保存资料后生效。', avatarHintSelected: '已选择新头像，点击“保存资料”后生效。', avatarHintSaved: '头像已保存，可随时再次更换。',
     groupNeedFriend: '请先互相关注至少 1 位好友，再发起群聊。', groupPickPrompt: '请输入群成员昵称，逗号分隔。可选：', groupInvalid: '未选择有效好友。', groupNamePrompt: '请输入群聊名称（可选）',
     personTitle: ' 的个人信息', follow: '关注', unfollow: '取消关注', block: '拉黑', unblock: '取消拉黑', startChat: '发起聊天',
     noChats: '暂无聊天窗口，可先点行程卡头像查看个人信息并发起聊天。',
+    msgChats: '聊天消息', msgSystem: '系统消息', likeTripNotice: '赞了你的行程', likeHomeNotice: '赞了你的主页', commentTripNotice: '评论了你的行程', followNotice: '关注了你',
     languageLabel: '语言'
   },
   en: {
     title: 'Romantic Journey · Find Travel Buddies', navHome: 'Home', navMatch: 'Match', navSquare: 'Trip Square', navCommunity: 'Community',
     profileSmall: 'Profile', heroTitle: 'Smarter filters, better companions', heroDesc: 'Tag filters, detailed itineraries, likes, avatars and reputation in one place.',
-    sectionTrip: '1) Publish a Trip', sectionMatch: '2) Quick Match', sectionStats: '3) My Interactions', sectionHome: '4) My Travel Home',
+    sectionTrip: '1) Publish a Trip', sectionMatch: '2) Quick Match', sectionStats: '3) My Interactions', sectionMessage: '4) Messages', sectionHome: '5) My Travel Home',
     plusCreateGroup: 'Create Group', chatWorkspaceTitle: 'Chats', send: 'Send', collapse: 'Hide',
     statsLike: 'Likes', statsSave: 'Saved', statsConnect: 'Chat intents', statsFollowing: 'Following', statsFriends: 'Mutual friends', statsBlocked: 'Blocked', statsChats: 'Chats',
     avatarHintDefault: 'Supports jpg/png/webp. Effective after saving profile.', avatarHintSelected: 'New avatar selected. Save profile to apply.', avatarHintSaved: 'Avatar saved. You can change it anytime.',
     groupNeedFriend: 'Please mutually follow at least one friend before creating a group.', groupPickPrompt: 'Enter member nicknames, comma-separated. Available: ', groupInvalid: 'No valid friend selected.', groupNamePrompt: 'Enter group name (optional)',
     personTitle: "'s profile", follow: 'Follow', unfollow: 'Unfollow', block: 'Block', unblock: 'Unblock', startChat: 'Start Chat',
     noChats: 'No chats yet. Click an avatar in trip cards to open profile and start chatting.',
+    msgChats: 'Chats', msgSystem: 'System', likeTripNotice: 'liked your trip', likeHomeNotice: 'liked your homepage', commentTripNotice: 'commented on your trip', followNotice: 'followed you',
     languageLabel: 'Language'
   }
 };
@@ -110,12 +116,15 @@ function applyI18n() {
   if (cards[0]) cards[0].textContent = t('sectionTrip');
   if (cards[1]) cards[1].textContent = t('sectionMatch');
   if (cards[2]) cards[2].textContent = t('sectionStats');
-  if (cards[3]) cards[3].textContent = t('sectionHome');
+  if (cards[3]) cards[3].textContent = t('sectionMessage');
+  if (cards[4]) cards[4].textContent = t('sectionHome');
   if (createGroupBtn) createGroupBtn.textContent = t('plusCreateGroup');
   if (chatWorkspaceTitle) chatWorkspaceTitle.textContent = t('chatWorkspaceTitle');
   if (chatWorkspaceClose) chatWorkspaceClose.textContent = t('collapse');
   const sendBtn = chatSendForm?.querySelector('button[type="submit"]');
   if (sendBtn) sendBtn.textContent = t('send');
+  if (msgTabChats) msgTabChats.textContent = t('msgChats');
+  if (msgTabSystem) msgTabSystem.textContent = t('msgSystem');
 }
 
 const sampleTrips = [
@@ -191,6 +200,24 @@ if (langSelect) {
     render();
   });
 }
+if (msgTabChats && msgTabSystem) {
+  msgTabChats.addEventListener('click', () => {
+    messageChats.hidden = false;
+    messageSystem.hidden = true;
+    msgTabChats.classList.add('secondary');
+    msgTabChats.classList.remove('ghost');
+    msgTabSystem.classList.add('ghost');
+    msgTabSystem.classList.remove('secondary');
+  });
+  msgTabSystem.addEventListener('click', () => {
+    messageChats.hidden = true;
+    messageSystem.hidden = false;
+    msgTabSystem.classList.add('secondary');
+    msgTabSystem.classList.remove('ghost');
+    msgTabChats.classList.add('ghost');
+    msgTabChats.classList.remove('secondary');
+  });
+}
 
 avatarPickBtn.addEventListener('click', () => avatarFileInput.click());
 avatarFileInput.addEventListener('change', async () => {
@@ -254,6 +281,7 @@ tripForm.addEventListener('submit', (event) => {
     review: { score: 5.0, count: 1, highlights: ['资料完整'] },
     trust: { score: 4.6, completion: 95, verified: true },
     likeCount: 0,
+    comments: [],
     createdAt: new Date().toISOString()
   };
   state.trips = [newTrip, ...state.trips].slice(0, 30);
@@ -281,7 +309,9 @@ mediaForm.addEventListener('submit', async (event) => {
       cover: await fileToDataUrl(file),
       caption: type === '图片' && allowed.length > 1 ? `${caption} · ${index + 1}` : caption,
       createdAt: new Date().toISOString(),
-      checkin: checkin || `${location} · ${formatTime(new Date().toISOString())}`
+      checkin: checkin || `${location} · ${formatTime(new Date().toISOString())}`,
+      user: currentNicknameAuth,
+      likes: []
     });
   }
   state.mediaPosts = [...payload, ...state.mediaPosts].slice(0, 20);
@@ -349,6 +379,7 @@ tripList.addEventListener('click', (event) => {
     const liked = state.actions.like.includes(id);
     state.actions.like = liked ? state.actions.like.filter((item) => item !== id) : [...state.actions.like, id];
     trip.likeCount = Math.max(0, (trip.likeCount || 0) + (liked ? -1 : 1));
+    if (!liked && trip.user && trip.user !== currentNicknameAuth) addNotification(trip.user, `${currentNicknameAuth} ${t('likeTripNotice')}：${trip.destination}`);
   } else {
     ['dislike', 'save'].forEach((key) => {
       if (key !== action) state.actions[key] = state.actions[key].filter((item) => item !== id);
@@ -371,14 +402,46 @@ tripList.addEventListener('click', (event) => {
   openPersonDialog(trip.user);
 });
 
+tripList.addEventListener('submit', (event) => {
+  const form = event.target.closest('.trip-comment-form');
+  if (!form) return;
+  event.preventDefault();
+  const id = event.target.closest('[data-id]')?.dataset.id;
+  const trip = state.trips.find((item) => item.id === id);
+  const input = form.querySelector('input[name="comment"]');
+  const textValue = String(input?.value || '').trim();
+  if (!trip || !textValue) return;
+  trip.comments = Array.isArray(trip.comments) ? trip.comments : [];
+  trip.comments.push({ user: currentNicknameAuth, text: textValue, createdAt: new Date().toISOString() });
+  if (trip.user && trip.user !== currentNicknameAuth) addNotification(trip.user, `${currentNicknameAuth} ${t('commentTripNotice')}：${textValue}`);
+  if (input) input.value = '';
+  persist();
+  render();
+});
+
 mediaList.addEventListener('click', (event) => {
-  const button = event.target.closest('button[data-action="delete-media"]');
+  const button = event.target.closest('button[data-action]');
   if (!button) return;
   const id = event.target.closest('[data-id]')?.dataset.id;
   if (!id) return;
-  state.mediaPosts = state.mediaPosts.filter((post) => post.id !== id);
-  persist();
-  render();
+  const post = state.mediaPosts.find((item) => item.id === id);
+  if (!post) return;
+
+  if (button.dataset.action === 'delete-media') {
+    state.mediaPosts = state.mediaPosts.filter((item) => item.id !== id);
+    persist();
+    render();
+    return;
+  }
+
+  if (button.dataset.action === 'like-media') {
+    post.likes = Array.isArray(post.likes) ? post.likes : [];
+    const liked = post.likes.includes(currentNicknameAuth);
+    post.likes = liked ? post.likes.filter((name) => name !== currentNicknameAuth) : [...post.likes, currentNicknameAuth];
+    if (!liked && post.user && post.user !== currentNicknameAuth) addNotification(post.user, `${currentNicknameAuth} ${t('likeHomeNotice')}：${post.caption}`);
+    persist();
+    render();
+  }
 });
 
 createGroupBtn.addEventListener('click', () => {
@@ -445,6 +508,12 @@ chatSendForm.addEventListener('submit', (event) => {
   renderChatList();
 });
 
+messageChats.addEventListener('click', (event) => {
+  const btn = event.target.closest('button[data-chat-id]');
+  if (!btn) return;
+  openChat(btn.dataset.chatId);
+});
+
 chatTabs.addEventListener('click', (event) => {
   const btn = event.target.closest('button[data-chat-id]');
   if (!btn) return;
@@ -458,6 +527,7 @@ function render() {
   renderCountries();
   renderBadges();
   renderChatList();
+  renderMessageCenter();
 }
 
 function renderTrips() {
@@ -523,6 +593,9 @@ function renderTrips() {
       if (state.actions[action].includes(trip.id)) btn.textContent = `✓ ${btn.textContent}`;
     });
 
+    const commentList = fragment.querySelector('.trip-comments-list');
+    const comments = Array.isArray(trip.comments) ? trip.comments : [];
+    commentList.innerHTML = comments.length ? comments.slice(-3).map((c) => `<p><strong>${c.user}</strong>：${c.text}</p>`).join('') : `<p class="hint">${currentLang === 'en' ? 'No comments yet.' : '暂无评论'}</p>`;
     tripList.append(fragment);
   });
 }
@@ -547,6 +620,9 @@ function renderMedia() {
     fragment.querySelector('.media-title').textContent = post.caption;
     fragment.querySelector('.media-meta').textContent = `${post.type} · ${post.location} · 创建于 ${formatTime(post.createdAt)}`;
     fragment.querySelector('.media-checkin').textContent = `📍 打卡：${post.checkin || '未打卡'}`;
+    const likes = Array.isArray(post.likes) ? post.likes.length : 0;
+    const likeBtn = fragment.querySelector('button[data-action="like-media"]');
+    if (likeBtn) likeBtn.textContent = `👍 赞主页 (${likes})`;
     mediaList.append(fragment);
   });
 }
@@ -568,6 +644,18 @@ function renderBadges() {
   badgeList.innerHTML = unlocked.length
     ? unlocked.map(([name, desc]) => `<article class="badge-item"><h4>${name}</h4><p>${desc}</p></article>`).join('')
     : '<p class="hint">完成互动后可解锁你的旅行勋章。</p>';
+}
+
+function renderMessageCenter() {
+  const chats = social.chats.filter((chat) => chat.members.includes(currentNicknameAuth));
+  messageChats.innerHTML = chats.length
+    ? chats.map((chat) => `<article class="msg-item"><strong>${chat.type === 'group' ? '👥' : '💬'} ${chat.name || chat.members.filter((x) => x !== currentNicknameAuth).join('、')}</strong><p class="hint">${chat.messages.length ? chat.messages[chat.messages.length - 1].text : (currentLang === 'en' ? 'No message yet' : '暂无消息')}</p><button class="ghost" data-chat-id="${chat.id}" type="button">${currentLang === 'en' ? 'Open' : '打开'}</button></article>`).join('')
+    : `<p class="hint">${t('noChats')}</p>`;
+
+  const notices = getNotifications(currentNicknameAuth);
+  messageSystem.innerHTML = notices.length
+    ? notices.slice(-30).reverse().map((n) => `<article class="msg-item"><strong>${n.title}</strong><p class="hint">${formatTime(n.createdAt)}</p></article>`).join('')
+    : `<p class="hint">${currentLang === 'en' ? 'No system notifications yet.' : '暂无系统消息'}</p>`;
 }
 
 function renderChatList() {
@@ -641,8 +729,10 @@ function describeRelationship(target) {
 function toggleFollow(target) {
   if (!target || target === currentNicknameAuth) return;
   const set = new Set(getFollowing(currentNicknameAuth));
-  if (set.has(target)) set.delete(target); else set.add(target);
+  const adding = !set.has(target);
+  if (!adding) set.delete(target); else set.add(target);
   social.follows[currentNicknameAuth] = [...set];
+  if (adding) addNotification(target, `${currentNicknameAuth} ${t('followNotice')}`);
 }
 function toggleBlock(target) {
   if (!target || target === currentNicknameAuth) return;
@@ -706,6 +796,16 @@ personChatBtn.addEventListener('click', () => {
   openDirectChat(activeProfileUser);
 });
 
+
+function getNotifications(user) { return Array.isArray(social.notifications?.[user]) ? social.notifications[user] : []; }
+function addNotification(user, title) {
+  if (!user || user === currentNicknameAuth) return;
+  if (!social.notifications || typeof social.notifications !== 'object') social.notifications = {};
+  const list = getNotifications(user);
+  social.notifications[user] = [...list, { id: crypto.randomUUID(), title, createdAt: new Date().toISOString() }].slice(-80);
+  persistSocial();
+}
+
 function updateMediaInputByType() {
   const type = mediaType.value;
   if (type === '视频') {
@@ -756,10 +856,11 @@ function loadSocial() {
         name: chat.name || '',
         members: Array.isArray(chat.members) ? unique(chat.members.filter(Boolean)) : [],
         messages: Array.isArray(chat.messages) ? chat.messages.map((m) => ({ sender: m.sender, text: m.text || '', createdAt: m.createdAt || new Date().toISOString() })) : []
-      })) : []
+      })) : [],
+      notifications: parsed.notifications && typeof parsed.notifications === 'object' ? parsed.notifications : {}
     };
   } catch {
-    return { follows: {}, blocks: {}, chats: [] };
+    return { follows: {}, blocks: {}, chats: [], notifications: {} };
   }
 }
 function persistSocial() { localStorage.setItem(SOCIAL_KEY, JSON.stringify(social)); }
@@ -775,7 +876,7 @@ function loadState() {
       ...parsed,
       profile: { ...defaultState.profile, ...parsed.profile, skills: Array.isArray(parsed.profile?.skills) ? parsed.profile.skills : defaultState.profile.skills, avatar: parsed.profile?.avatar || defaultState.profile.avatar },
       actions: { ...defaultState.actions, ...parsed.actions },
-      mediaPosts: (Array.isArray(parsed.mediaPosts) ? parsed.mediaPosts : defaultState.mediaPosts).map((post) => ({ ...post, createdAt: post.createdAt || new Date().toISOString(), checkin: post.checkin || `${post.location || '未知地点'} · ${formatTime(new Date().toISOString())}` })),
+      mediaPosts: (Array.isArray(parsed.mediaPosts) ? parsed.mediaPosts : defaultState.mediaPosts).map((post) => ({ ...post, user: post.user || currentNicknameAuth, likes: Array.isArray(post.likes) ? post.likes : [], createdAt: post.createdAt || new Date().toISOString(), checkin: post.checkin || `${post.location || '未知地点'} · ${formatTime(new Date().toISOString())}` })),
       trips: (Array.isArray(parsed.trips) ? parsed.trips : defaultState.trips).map((trip) => ({
         ...trip,
         tags: Array.isArray(trip.tags) ? trip.tags : [],
@@ -787,6 +888,7 @@ function loadState() {
         badges: Array.isArray(trip.badges) ? trip.badges : [],
         avatar: trip.avatar || defaultAvatar,
         review: trip.review || { score: 5.0, count: 1, highlights: [] },
+        comments: Array.isArray(trip.comments) ? trip.comments : [],
         trust: trip.trust || { score: 4.5, completion: 90, verified: false }
       }))
     };

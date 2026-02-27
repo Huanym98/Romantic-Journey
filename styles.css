@@ -534,3 +534,39 @@ input[type="file"]::file-selector-button:hover {
   font-size: .82rem;
   padding: .35rem .5rem;
 }
+
+
+.message-tabs {
+  display: flex;
+  gap: .5rem;
+  margin-bottom: .6rem;
+}
+.message-panel {
+  display: grid;
+  gap: .55rem;
+}
+.msg-item {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: .55rem .65rem;
+  background: #fff;
+}
+.trip-comments {
+  margin-top: .6rem;
+  border-top: 1px dashed var(--border);
+  padding-top: .55rem;
+}
+.trip-comments-list {
+  display: grid;
+  gap: .25rem;
+  margin-bottom: .45rem;
+  color: #475569;
+  font-size: .86rem;
+}
+.trip-comment-form {
+  display: flex;
+  gap: .45rem;
+}
+.trip-comment-form input {
+  flex: 1;
+}
