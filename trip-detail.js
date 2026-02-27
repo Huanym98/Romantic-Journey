@@ -4,6 +4,13 @@ const params = new URLSearchParams(window.location.search);
 const id = params.get('id') || '';
 const user = params.get('user') || '';
 const card = document.querySelector('#tripCard');
+const personDialog = document.querySelector('#personDialog');
+const personDialogClose = document.querySelector('#personDialogClose');
+const personAvatar = document.querySelector('#personAvatar');
+const personMeta = document.querySelector('#personMeta');
+const personRelation = document.querySelector('#personRelation');
+const personSkills = document.querySelector('#personSkills');
+const personHomeBtn = document.querySelector('#personHomeBtn');
 const defaultAvatar = 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=80&q=80';
 
 function escapeHtml(value) {
@@ -41,6 +48,16 @@ function findTrip() {
   return null;
 }
 
+function getUserState(nickname) {
+  if (!nickname) return null;
+  try {
+    const parsed = JSON.parse(localStorage.getItem(`${STORAGE_KEY}:${nickname}`) || '{}');
+    return parsed && typeof parsed === 'object' ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
 function formatTime(iso) {
   if (!iso) return '未知';
   const date = new Date(iso);
@@ -52,10 +69,22 @@ function formatTime(iso) {
   return `${date.getFullYear()}-${month}-${day} ${hour}:${minute}`;
 }
 
+function openPersonDialog(nickname) {
+  if (!personDialog) return;
+  const state = getUserState(nickname) || {};
+  const profile = state.profile || {};
+  if (personAvatar) personAvatar.src = profile.avatar || defaultAvatar;
+  if (personMeta) personMeta.textContent = `${nickname || '未知用户'} ｜ MBTI: ${profile.mbti || '未知'} ｜ 星座: ${profile.zodiac || '未知'}`;
+  if (personRelation) personRelation.textContent = `旅行节奏：${profile.pace || '未知'} ｜ 作息：${profile.wakeUp || '未知'}`;
+  if (personSkills) personSkills.textContent = `技能标签：${Array.isArray(profile.skills) && profile.skills.length ? profile.skills.join('、') : '暂无'}`;
+  if (personHomeBtn) personHomeBtn.onclick = () => { window.location.href = `account.html?user=${encodeURIComponent(nickname)}`; };
+  if (typeof personDialog.showModal === 'function') personDialog.showModal();
+}
+
 function render() {
   const trip = findTrip();
   if (!trip) {
-    card.innerHTML = '<h2>行程不存在</h2><a href="search.html" class="secondary">返回查询</a>';
+    card.innerHTML = '<h2>行程不存在</h2>';
     return;
   }
 
@@ -74,13 +103,12 @@ function render() {
     <p class="hint">景点：${spots}</p>
     <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin:.75rem 0;">
       <button id="shareTripBtn" class="share-pill" type="button">↗ 分享</button>
-      <a href="search.html" class="secondary" style="display:inline-block;">返回查询</a>
     </div>
     <p id="shareResult" class="hint" style="word-break:break-all;"></p>
     <h3>所有评论</h3>
     <div class="msg-list">
       ${comments.length
-    ? comments.map((comment) => `<article class="msg-item trip-comment-item"><img class="comment-avatar" src="${escapeHtml(comment.avatar || defaultAvatar)}" alt="${escapeHtml(comment.user || '匿名')}头像" /><div><p><strong>${escapeHtml(comment.user || '匿名')}</strong></p><p>${escapeHtml(comment.text || '')}</p><small>${formatTime(comment.createdAt)}</small></div></article>`).join('')
+    ? comments.map((comment) => `<article class="msg-item trip-comment-item"><img class="comment-avatar" data-user="${escapeHtml(comment.user || '')}" src="${escapeHtml(comment.avatar || defaultAvatar)}" alt="${escapeHtml(comment.user || '匿名')}头像" /><div><p><strong>${escapeHtml(comment.user || '匿名')}</strong></p><p>${escapeHtml(comment.text || '')}</p><small>${formatTime(comment.createdAt)}</small></div></article>`).join('')
     : '<p class="hint">暂无评论。</p>'}
     </div>
   `;
@@ -99,6 +127,12 @@ function render() {
     }
     shareResult.textContent = `转发链接：${shareUrl}`;
   });
+
+  card.querySelectorAll('.comment-avatar[data-user]').forEach((el) => {
+    el.addEventListener('click', () => openPersonDialog(el.dataset.user || ''));
+  });
 }
+
+personDialogClose?.addEventListener('click', () => personDialog.close());
 
 render();
