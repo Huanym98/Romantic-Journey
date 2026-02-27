@@ -15,7 +15,6 @@ const mbtiFilter = document.querySelector('#mbtiFilter');
 const zodiacFilter = document.querySelector('#zodiacFilter');
 const sortFilter = document.querySelector('#sortFilter');
 const seedBtn = document.querySelector('#seedBtn');
-const itineraryAiBtn = document.querySelector('#itineraryAiBtn');
 const langSelect = document.querySelector('#langSelect');
 const profileToggle = document.querySelector('#profileToggle');
 const currentNickname = document.querySelector('#currentNickname');
@@ -34,6 +33,7 @@ const msgTabSystem = document.querySelector('#msgTabSystem');
 const messageChats = document.querySelector('#messageChats');
 const messageSystem = document.querySelector('#messageSystem');
 const messageSidebarTitle = document.querySelector('#messageSidebarTitle');
+const messageSidebarText = document.querySelector('#messageSidebarText');
 const countryList = document.querySelector('#countryList');
 const badgeList = document.querySelector('#badgeList');
 const chatWorkspace = document.querySelector('#chatWorkspace');
@@ -59,6 +59,14 @@ const personTrust = document.querySelector('#personTrust');
 const personFollowBtn = document.querySelector('#personFollowBtn');
 const personBlockBtn = document.querySelector('#personBlockBtn');
 const personChatBtn = document.querySelector('#personChatBtn');
+const navLinks = document.querySelectorAll('.nav-links a[data-page]');
+const homeMain = document.querySelector('#homeMain');
+const myHomeMain = document.querySelector('#myHomeMain');
+const messageUnreadBadge = document.querySelector('#messageUnreadBadge');
+const sectionTripTitle = document.querySelector('#sectionTripTitle');
+const sectionMatchTitle = document.querySelector('#sectionMatchTitle');
+const sectionStatsTitle = document.querySelector('#sectionStatsTitle');
+const sectionHomeTitle = document.querySelector('#sectionHomeTitle');
 
 const STORAGE_KEY = 'romanticJourneyState';
 const USERS_KEY = 'romanticJourneyUsers';
@@ -70,29 +78,29 @@ const defaultAvatar = 'https://images.unsplash.com/photo-1544005313-94ddf0286df2
 
 const I18N = {
   'zh-CN': {
-    title: 'Romantic Journey · 找旅行搭子', navHome: '首页', navMatch: '找搭子', navSquare: '行程广场', navCommunity: '旅行社区',
+    title: 'Romantic Journey · 找旅行搭子', navHome: '首页', navMatch: '找搭子', navSquare: '行程广场', navCommunity: '旅行社区', navMyHome: '我的主页',
     profileSmall: '个人资料', heroTitle: '筛选更精准，结伴更靠谱', heroDesc: '支持行程标签、详细安排、点赞热度、头像信息和口碑评价。',
-    sectionTrip: '1) 发布行程帖', sectionMatch: '2) 快速匹配区', sectionStats: '3) 我的互动记录', sectionHome: '4) 我的旅行主页',
+    sectionTrip: '1) 发布行程帖', sectionMatch: '2) 快速匹配区', sectionStats: '3) 我的互动记录', sectionHome: '我的旅行主页',
     plusCreateGroup: '创建群组', chatWorkspaceTitle: '聊天', send: '发送', collapse: '收起',
-    statsLike: '点赞', statsSave: '收藏', statsConnect: '私聊意向', statsFollowing: '我关注', statsFriends: '互相关注好友', statsBlocked: '已拉黑', statsChats: '聊天窗口',
+    statsLike: '点赞', statsSave: '收藏', statsFollowing: '我关注', statsFriends: '互相关注好友', statsBlocked: '已拉黑',
     avatarHintDefault: '支持 jpg/png/webp，保存资料后生效。', avatarHintSelected: '已选择新头像，点击“保存资料”后生效。', avatarHintSaved: '头像已保存，可随时再次更换。',
     groupNeedFriend: '请先互相关注至少 1 位好友，再发起群聊。', groupPickPrompt: '请输入群成员昵称，逗号分隔。可选：', groupInvalid: '未选择有效好友。', groupNamePrompt: '请输入群聊名称（可选）',
     personTitle: ' 的个人信息', follow: '关注', unfollow: '取消关注', block: '拉黑', unblock: '取消拉黑', startChat: '发起聊天',
     noChats: '暂无聊天窗口，可先点行程卡头像查看个人信息并发起聊天。',
-    msgChats: '聊天消息', msgSystem: '系统消息', likeTripNotice: '赞了你的行程', likeHomeNotice: '赞了你的主页', commentTripNotice: '评论了你的行程', followNotice: '关注了你', deleteComment: '删除评论', clearComments: '清空评论', replyComment: '回复', pinComment: '置顶', unpinComment: '取消置顶', authorTag: '作者', messageTitle: '消息', aiGenerate: '🤖 AI 自动生成', aiFillFields: '请先填写目的地、日期、预算、标签和景点。',
+    msgChats: '聊天消息', msgSystem: '系统消息', likeTripNotice: '赞了你的行程', likeHomeNotice: '赞了你的主页', commentTripNotice: '评论了你的行程', followNotice: '关注了你', deleteComment: '删除评论', clearComments: '清空评论', replyComment: '回复', pinComment: '置顶', unpinComment: '取消置顶', authorTag: '作者', messageTitle: '消息',
     languageLabel: '语言'
   },
   en: {
-    title: 'Romantic Journey · Find Travel Buddies', navHome: 'Home', navMatch: 'Match', navSquare: 'Trip Square', navCommunity: 'Community',
+    title: 'Romantic Journey · Find Travel Buddies', navHome: 'Home', navMatch: 'Match', navSquare: 'Trip Square', navCommunity: 'Community', navMyHome: 'My Home',
     profileSmall: 'Profile', heroTitle: 'Smarter filters, better companions', heroDesc: 'Tag filters, detailed itineraries, likes, avatars and reputation in one place.',
     sectionTrip: '1) Publish a Trip', sectionMatch: '2) Quick Match', sectionStats: '3) My Interactions', sectionHome: '4) My Travel Home',
     plusCreateGroup: 'Create Group', chatWorkspaceTitle: 'Chats', send: 'Send', collapse: 'Hide',
-    statsLike: 'Likes', statsSave: 'Saved', statsConnect: 'Chat intents', statsFollowing: 'Following', statsFriends: 'Mutual friends', statsBlocked: 'Blocked', statsChats: 'Chats',
+    statsLike: 'Likes', statsSave: 'Saved', statsFollowing: 'Following', statsFriends: 'Mutual friends', statsBlocked: 'Blocked',
     avatarHintDefault: 'Supports jpg/png/webp. Effective after saving profile.', avatarHintSelected: 'New avatar selected. Save profile to apply.', avatarHintSaved: 'Avatar saved. You can change it anytime.',
     groupNeedFriend: 'Please mutually follow at least one friend before creating a group.', groupPickPrompt: 'Enter member nicknames, comma-separated. Available: ', groupInvalid: 'No valid friend selected.', groupNamePrompt: 'Enter group name (optional)',
     personTitle: "'s profile", follow: 'Follow', unfollow: 'Unfollow', block: 'Block', unblock: 'Unblock', startChat: 'Start Chat',
     noChats: 'No chats yet. Click an avatar in trip cards to open profile and start chatting.',
-    msgChats: 'Chats', msgSystem: 'System', likeTripNotice: 'liked your trip', likeHomeNotice: 'liked your homepage', commentTripNotice: 'commented on your trip', followNotice: 'followed you', deleteComment: 'Delete', clearComments: 'Clear all', replyComment: 'Reply', pinComment: 'Pin', unpinComment: 'Unpin', authorTag: 'Author', messageTitle: 'Messages', aiGenerate: '🤖 Auto-generate with AI', aiFillFields: 'Please fill destination, dates, budget, tags and spots first.',
+    msgChats: 'Chats', msgSystem: 'System', likeTripNotice: 'liked your trip', likeHomeNotice: 'liked your homepage', commentTripNotice: 'commented on your trip', followNotice: 'followed you', deleteComment: 'Delete', clearComments: 'Clear all', replyComment: 'Reply', pinComment: 'Pin', unpinComment: 'Unpin', authorTag: 'Author', messageTitle: 'Messages',
     languageLabel: 'Language'
   }
 };
@@ -108,17 +116,17 @@ function applyI18n() {
   if (nav[1]) nav[1].textContent = t('navMatch');
   if (nav[2]) nav[2].textContent = t('navSquare');
   if (nav[3]) nav[3].textContent = t('navCommunity');
+  if (nav[4]) nav[4].textContent = t('navMyHome');
   const chipSmall = document.querySelector('#profileToggle small');
   if (chipSmall) chipSmall.textContent = t('profileSmall');
   const heroTitle = document.querySelector('.hero-strip h1');
   const heroDesc = document.querySelector('.hero-strip p');
   if (heroTitle) heroTitle.textContent = t('heroTitle');
   if (heroDesc) heroDesc.textContent = t('heroDesc');
-  const cards = document.querySelectorAll('main.layout > section.card > h2');
-  if (cards[0]) cards[0].textContent = t('sectionTrip');
-  if (cards[1]) cards[1].textContent = t('sectionMatch');
-  if (cards[2]) cards[2].textContent = t('sectionStats');
-  if (cards[3]) cards[3].textContent = t('sectionHome');
+  if (sectionTripTitle) sectionTripTitle.textContent = t('sectionTrip');
+  if (sectionMatchTitle) sectionMatchTitle.textContent = t('sectionMatch');
+  if (sectionStatsTitle) sectionStatsTitle.textContent = t('sectionStats');
+  if (sectionHomeTitle) sectionHomeTitle.textContent = t('sectionHome');
   if (createGroupBtn) createGroupBtn.textContent = t('plusCreateGroup');
   if (chatWorkspaceTitle) chatWorkspaceTitle.textContent = t('chatWorkspaceTitle');
   if (chatWorkspaceClose) chatWorkspaceClose.textContent = t('collapse');
@@ -126,8 +134,7 @@ function applyI18n() {
   if (sendBtn) sendBtn.textContent = t('send');
   if (msgTabChats) msgTabChats.textContent = t('msgChats');
   if (msgTabSystem) msgTabSystem.textContent = t('msgSystem');
-  if (messageSidebarTitle) messageSidebarTitle.textContent = t('messageTitle');
-  if (itineraryAiBtn) itineraryAiBtn.textContent = t('aiGenerate');
+  if (messageSidebarText) messageSidebarText.textContent = t('messageTitle');
 }
 
 const sampleTrips = [
@@ -173,7 +180,7 @@ const defaultState = {
   },
   trips: sampleTrips,
   mediaPosts: sampleMedia,
-  actions: { like: [], dislike: [], save: [], connect: [] }
+  actions: { like: [], dislike: [], save: [] }
 };
 
 const currentNicknameAuth = requireCurrentNickname();
@@ -222,25 +229,16 @@ if (msgTabChats && msgTabSystem) {
   });
 }
 
-if (itineraryAiBtn) {
-  itineraryAiBtn.addEventListener('click', () => {
-    const destination = String(tripForm.elements.namedItem('destination')?.value || '').trim();
-    const departDate = String(tripForm.elements.namedItem('departDate')?.value || '').trim();
-    const returnDate = String(tripForm.elements.namedItem('returnDate')?.value || '').trim();
-    const budget = String(tripForm.elements.namedItem('budget')?.value || '').trim();
-    const tags = toList(tripForm.elements.namedItem('tags')?.value || '');
-    const spots = toList(tripForm.elements.namedItem('spots')?.value || '');
-    const itineraryField = tripForm.elements.namedItem('itinerary');
-    if (!destination || !departDate || !returnDate || !budget || !tags.length || !spots.length || !itineraryField) {
-      alert(t('aiFillFields'));
-      return;
-    }
-    const pace = String(tripForm.elements.namedItem('pace')?.value || '平衡');
-    const wakeUp = String(tripForm.elements.namedItem('wakeUp')?.value || '自然醒');
-    const socialStyle = String(tripForm.elements.namedItem('social')?.value || '适中');
-    itineraryField.value = buildAiItinerary({ destination, departDate, returnDate, budget, tags, spots, pace, wakeUp, socialStyle });
+if (navLinks.length) {
+  navLinks.forEach((link) => {
+    link.addEventListener('click', (event) => {
+      event.preventDefault();
+      setActivePage(link.dataset.page || 'home');
+    });
   });
 }
+setActivePage('home');
+
 
 avatarPickBtn.addEventListener('click', () => avatarFileInput.click());
 avatarFileInput.addEventListener('change', async () => {
@@ -432,7 +430,6 @@ tripList.addEventListener('click', (event) => {
   }
 
   if (action === 'connect') {
-    state.actions.connect = state.actions.connect.includes(id) ? state.actions.connect : [...state.actions.connect, id];
     openDirectChat(trip.user);
     persist();
     render();
@@ -596,6 +593,15 @@ chatTabs.addEventListener('click', (event) => {
   openChat(btn.dataset.chatId);
 });
 
+function setActivePage(page) {
+  const showMyHome = page === 'my-home';
+  if (homeMain) homeMain.hidden = showMyHome;
+  if (myHomeMain) myHomeMain.hidden = !showMyHome;
+  navLinks.forEach((link) => {
+    link.classList.toggle('active', (link.dataset.page || 'home') === page);
+  });
+}
+
 function render() {
   renderTrips();
   renderStats();
@@ -664,7 +670,7 @@ function renderTrips() {
       fragment.querySelector('.chips').append(li);
     });
 
-    ['like', 'dislike', 'save', 'connect'].forEach((action) => {
+    ['like', 'dislike', 'save'].forEach((action) => {
       const btn = fragment.querySelector(`button[data-action="${action}"]`);
       if (state.actions[action].includes(trip.id)) btn.textContent = `✓ ${btn.textContent}`;
     });
@@ -706,8 +712,8 @@ function renderStats() {
   const friends = getFriends().length;
   const blocked = getBlocked(currentNicknameAuth).length;
   statsBox.innerHTML = [
-    [t('statsLike'), state.actions.like.length], [t('statsSave'), state.actions.save.length], [t('statsConnect'), state.actions.connect.length],
-    [t('statsFollowing'), following], [t('statsFriends'), friends], [t('statsBlocked'), blocked], [t('statsChats'), social.chats.length]
+    [t('statsLike'), state.actions.like.length], [t('statsSave'), state.actions.save.length],
+    [t('statsFollowing'), following], [t('statsFriends'), friends], [t('statsBlocked'), blocked]
   ].map(([name, count]) => `<div>${name}<strong>${count}</strong></div>`).join('');
 }
 
@@ -737,7 +743,6 @@ function renderCountries() {
 
 function renderBadges() {
   const unlocked = [];
-  if (state.actions.connect.length >= 1) unlocked.push(['🤝 初次结伴', '第一次对某个行程发起私聊意向']);
   if (state.actions.like.length >= 1) unlocked.push(['👍 人气观察员', '第一次给行程点赞']);
   if (state.mediaPosts.length >= 1) unlocked.push(['📸 旅行记录官', '首次上传图片/视频内容']);
   if (state.mediaPosts.some((post) => isOverseas(post.location))) unlocked.push(['✈️ 出境初体验', '首次记录出国旅行']);
@@ -745,6 +750,34 @@ function renderBadges() {
   badgeList.innerHTML = unlocked.length
     ? unlocked.map(([name, desc]) => `<article class="badge-item"><h4>${name}</h4><p>${desc}</p></article>`).join('')
     : '<p class="hint">完成互动后可解锁你的旅行勋章。</p>';
+}
+
+function getUserReadMap() {
+  if (!social.readState || typeof social.readState !== 'object') social.readState = {};
+  if (!social.readState[currentNicknameAuth] || typeof social.readState[currentNicknameAuth] !== 'object') social.readState[currentNicknameAuth] = {};
+  return social.readState[currentNicknameAuth];
+}
+
+function getChatUnreadCount(chat) {
+  const readMap = getUserReadMap();
+  const readIndex = Number(readMap[chat.id] || 0);
+  if (readIndex >= chat.messages.length) return 0;
+  return chat.messages.slice(readIndex).filter((msg) => msg.sender !== currentNicknameAuth).length;
+}
+
+function markChatRead(chatId) {
+  const chat = social.chats.find((item) => item.id === chatId);
+  if (!chat) return;
+  const readMap = getUserReadMap();
+  readMap[chatId] = chat.messages.length;
+}
+
+function renderUnreadBadge() {
+  const chats = social.chats.filter((chat) => chat.members.includes(currentNicknameAuth));
+  const unread = chats.reduce((sum, chat) => sum + getChatUnreadCount(chat), 0);
+  if (!messageUnreadBadge) return;
+  messageUnreadBadge.hidden = unread <= 0;
+  messageUnreadBadge.textContent = String(unread > 99 ? '99+' : unread);
 }
 
 function renderMessageCenter() {
@@ -755,7 +788,9 @@ function renderMessageCenter() {
       const title = chat.type === 'group' ? (chat.name || chat.members.filter((x) => x !== currentNicknameAuth).join('、')) : peer;
       const avatar = chat.type === 'group' ? defaultAvatar : getUserAvatar(peer);
       const latestText = chat.messages.length ? chat.messages[chat.messages.length - 1].text : (currentLang === 'en' ? 'No message yet' : '暂无消息');
-      return `<article class="msg-item msg-chat-item" data-chat-id="${chat.id}"><img src="${avatar}" alt="${title}" class="msg-avatar" /><div><strong>${title}</strong><p class="hint">${latestText}</p></div></article>`;
+      const unread = getChatUnreadCount(chat);
+      const unreadTag = unread > 0 ? `<span class="msg-unread-dot">${unread > 99 ? '99+' : unread}</span>` : '';
+      return `<article class="msg-item msg-chat-item" data-chat-id="${chat.id}"><img src="${avatar}" alt="${title}" class="msg-avatar" /><div><strong>${title}${unreadTag}</strong><p class="hint">${latestText}</p></div></article>`;
     }).join('')
     : `<p class="hint">${t('noChats')}</p>`;
 
@@ -763,6 +798,8 @@ function renderMessageCenter() {
   messageSystem.innerHTML = notices.length
     ? notices.slice(-30).reverse().map((n) => `<article class="msg-item"><strong>${n.title}</strong><p class="hint">${formatTime(n.createdAt)}</p></article>`).join('')
     : `<p class="hint">${currentLang === 'en' ? 'No system notifications yet.' : '暂无系统消息'}</p>`;
+
+  renderUnreadBadge();
 }
 
 function renderChatList() {
@@ -794,8 +831,11 @@ function openChat(chatId) {
   const chat = social.chats.find((item) => item.id === chatId);
   if (!chat || !chat.members.includes(currentNicknameAuth)) return;
   activeChatId = chat.id;
+  markChatRead(chat.id);
+  persistSocial();
   chatWorkspace.hidden = false;
   paintChat(chat);
+  renderMessageCenter();
 }
 
 function paintChat(chat) {
@@ -992,10 +1032,11 @@ function loadSocial() {
         members: Array.isArray(chat.members) ? unique(chat.members.filter(Boolean)) : [],
         messages: Array.isArray(chat.messages) ? chat.messages.map((m) => ({ sender: m.sender, text: m.text || '', createdAt: m.createdAt || new Date().toISOString() })) : []
       })) : [],
-      notifications: parsed.notifications && typeof parsed.notifications === 'object' ? parsed.notifications : {}
+      notifications: parsed.notifications && typeof parsed.notifications === 'object' ? parsed.notifications : {},
+      readState: parsed.readState && typeof parsed.readState === 'object' ? parsed.readState : {}
     };
   } catch {
-    return { follows: {}, blocks: {}, chats: [], notifications: {} };
+    return { follows: {}, blocks: {}, chats: [], notifications: {}, readState: {} };
   }
 }
 function persistSocial() { localStorage.setItem(SOCIAL_KEY, JSON.stringify(social)); }
@@ -1080,7 +1121,6 @@ function closeProfilePanel() {
 
 function collectBadges() {
   const badges = [];
-  if (state.actions.connect.length) badges.push('🤝 初次结伴');
   if (state.mediaPosts.length) badges.push('📸 旅行记录官');
   if (state.mediaPosts.some((post) => isOverseas(post.location))) badges.push('✈️ 出境初体验');
   if (getFriends().length) badges.push('🫶 默契好友');

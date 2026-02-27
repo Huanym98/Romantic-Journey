@@ -11,10 +11,11 @@
       <div class="topbar-inner">
         <div class="brand"><img src="assets/logo.svg" alt="浪漫之旅 Logo" /></div>
         <nav class="nav-links">
-          <a href="#">首页</a>
-          <a href="#">找搭子</a>
-          <a href="#">行程广场</a>
-          <a href="#">旅行社区</a>
+          <a href="#" data-page="home" class="active">首页</a>
+          <a href="#" data-page="home">找搭子</a>
+          <a href="#" data-page="home">行程广场</a>
+          <a href="#" data-page="home">旅行社区</a>
+          <a href="#" data-page="my-home">我的主页</a>
         </nav>
         <label class="lang-switch" for="langSelect">
           <select id="langSelect" aria-label="Language">
@@ -95,9 +96,9 @@
     </aside>
 
     <div class="layout-wrap">
-    <main class="layout">
+    <main id="homeMain" class="layout">
       <section class="card">
-        <h2>1) 发布行程帖</h2>
+        <h2 id="sectionTripTitle">1) 发布行程帖</h2>
         <form id="tripForm" class="grid">
           <label>目的地 <input required name="destination" placeholder="例如：纽约" /></label>
           <label>出发时间 <input required type="date" name="departDate" /></label>
@@ -107,7 +108,6 @@
           <label>想去景点 <input required name="spots" placeholder="中央公园, 时代广场" /></label>
           <label class="full-width">具体行程安排
             <textarea required name="itinerary" rows="4" placeholder="D1 上午中央公园，午餐吃什么，晚上去哪里"></textarea>
-            <button id="itineraryAiBtn" type="button" class="ghost">🤖 AI 自动生成</button>
           </label>
           <label>旅行节奏 <select name="pace"><option value="特种兵式">特种兵式</option><option value="平衡">平衡</option><option value="慢游">慢游</option></select></label>
           <label>作息 <select name="wakeUp"><option value="早起">早起</option><option value="自然醒">自然醒</option><option value="夜猫">夜猫</option></select></label>
@@ -117,7 +117,7 @@
       </section>
 
       <section class="card">
-        <h2>2) 快速匹配区</h2>
+        <h2 id="sectionMatchTitle">2) 快速匹配区</h2>
         <div class="toolbar">
           <input id="searchInput" placeholder="按目的地搜索（如 成都）" />
           <select id="styleFilter"><option value="all">全部节奏</option><option value="特种兵式">特种兵式</option><option value="平衡">平衡</option><option value="慢游">慢游</option></select>
@@ -130,12 +130,15 @@
       </section>
 
       <section class="card">
-        <h2>3) 我的互动记录</h2>
+        <h2 id="sectionStatsTitle">3) 我的互动记录</h2>
         <div class="stats" id="stats"></div>
       </section>
 
+    </main>
+
+    <main id="myHomeMain" class="layout" hidden>
       <section class="card">
-        <h2>4) 我的旅行主页</h2>
+        <h2 id="sectionHomeTitle">我的旅行主页</h2>
         <div class="profile-grid">
           <section>
             <h3>旅行记忆墙（图片 / 视频）</h3>
@@ -160,7 +163,7 @@
     </main>
 
     <aside class="message-nav card">
-      <h2 id="messageSidebarTitle">消息</h2>
+      <h2 id="messageSidebarTitle"><span id="messageSidebarText">消息</span><span id="messageUnreadBadge" class="message-unread-badge" hidden>0</span></h2>
       <div class="message-tabs">
         <button id="msgTabChats" class="secondary" type="button">聊天消息</button>
         <button id="msgTabSystem" class="ghost" type="button">系统消息</button>
