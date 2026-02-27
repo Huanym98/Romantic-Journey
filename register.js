@@ -1,6 +1,7 @@
 const USERS_KEY = 'romanticJourneyUsers';
 const CURRENT_USER_KEY = 'romanticJourneyCurrentUser';
 const LANG_KEY = 'romanticJourneyLang';
+const ADMIN_EVENTS_KEY = 'romanticJourneyAdminEvents';
 
 const registerForm = document.querySelector('#registerForm');
 const message = document.querySelector('#registerMessage');
@@ -104,7 +105,9 @@ registerForm.addEventListener('submit', (event) => {
     return;
   }
 
-  users.push({ nickname, password, firstLogin: true });
+  const createdAt = new Date().toISOString();
+  users.push({ nickname, password, firstLogin: true, createdAt });
+  recordAdminEvent('register', nickname, createdAt);
   localStorage.setItem(USERS_KEY, JSON.stringify(users));
   localStorage.setItem(CURRENT_USER_KEY, nickname);
   window.location.href = 'index.html';
@@ -117,11 +120,11 @@ function getUsers() {
     if (!parsed.length) return [];
 
     if (typeof parsed[0] === 'string') {
-      return parsed.map((nickname) => ({ nickname, password: '123456', firstLogin: false }));
+      return parsed.map((nickname) => ({ nickname, password: '123456', firstLogin: false, createdAt: '' }));
     }
 
     return parsed
-      .map((user) => ({ nickname: user.nickname || user.username, password: user.password || '123456', firstLogin: Boolean(user.firstLogin) }))
+      .map((user) => ({ nickname: user.nickname || user.username, password: user.password || '123456', firstLogin: Boolean(user.firstLogin), createdAt: user.createdAt || '' }))
       .filter((user) => user.nickname);
   } catch {
     return [];
@@ -135,4 +138,15 @@ function validatePasswordComplexity(password) {
   if (!/[0-9]/.test(password)) return { ok: false, message: t('needNumber') };
   if (!/[^A-Za-z0-9]/.test(password)) return { ok: false, message: t('needSymbol') };
   return { ok: true, message: '' };
+}
+
+function recordAdminEvent(type, nickname, createdAt) {
+  try {
+    const list = JSON.parse(localStorage.getItem(ADMIN_EVENTS_KEY) || '[]');
+    const next = Array.isArray(list) ? list : [];
+    next.push({ id: crypto.randomUUID(), user: nickname, type, createdAt: createdAt || new Date().toISOString() });
+    localStorage.setItem(ADMIN_EVENTS_KEY, JSON.stringify(next.slice(-500)));
+  } catch {
+    // ignore
+  }
 }

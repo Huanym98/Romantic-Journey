@@ -19,6 +19,8 @@
 - 国家足迹支持显示国家国旗，提升地区辨识度。
 - 笔记展示创建日期与地点打卡信息，并支持删除已发布内容。
 
+- 新增“管理后台”页面：汇总注册用户、行程/日记规模与关键互动日志，便于演示运营视角。
+
 ## 本地启动
 
 ```bash
@@ -30,6 +32,7 @@ python3 -m http.server 4173
 - 首页：`http://localhost:4173/index.html`
 - 我的主页：`http://localhost:4173/my-home.html`
 - 查询页：`http://localhost:4173/search.html`
+- 管理后台：`http://localhost:4173/admin.html`
 - 账户主页：`http://localhost:4173/account.html?user=<昵称>`
 - 行程详情：`http://localhost:4173/trip-detail.html?id=<行程ID>&user=<昵称>`
 - 日记详情：`http://localhost:4173/diary-detail.html?id=<日记ID>&user=<昵称>`

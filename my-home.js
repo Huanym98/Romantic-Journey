@@ -2,6 +2,7 @@ const STORAGE_KEY = 'romanticJourneyState';
 const CURRENT_USER_KEY = 'romanticJourneyCurrentUser';
 const SOCIAL_KEY = 'romanticJourneySocial';
 const LANG_KEY = 'romanticJourneyLang';
+const ADMIN_EVENTS_KEY = 'romanticJourneyAdminEvents';
 const defaultAvatar = 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=160&q=80';
 
 const mediaForm = document.querySelector('#mediaForm');
@@ -16,6 +17,7 @@ const badgeList = document.querySelector('#badgeList');
 const currentNickname = document.querySelector('#currentNickname');
 const headerAvatar = document.querySelector('#profileToggle img');
 const langSelect = document.querySelector('#langSelect');
+const myTripsList = document.querySelector('#myTripsList');
 
 const currentUser = requireCurrentNickname();
 let state = loadState();
@@ -64,6 +66,7 @@ mediaForm?.addEventListener('submit', async (event) => {
   }
 
   state.mediaPosts = [...payload, ...state.mediaPosts].slice(0, 30);
+  recordAdminEvent('publish-diary', { count: payload.length });
   persist();
   mediaForm.reset();
   updateMediaInputByType();
@@ -97,6 +100,7 @@ function render() {
   renderMedia();
   renderCountries();
   renderBadges();
+  renderMyTrips();
   if (headerAvatar) headerAvatar.src = state.profile?.avatar || defaultAvatar;
 }
 
@@ -132,6 +136,14 @@ function renderCountries() {
   countryList.innerHTML = countries.length
     ? countries.map((country) => `<span class="country-pill">${countryToFlag(country)} ${country}</span>`).join('')
     : '<p class="hint">先发布一条旅行图片/视频，点亮你的国家足迹。</p>';
+}
+
+function renderMyTrips() {
+  if (!myTripsList) return;
+  const myTrips = (Array.isArray(state.trips) ? state.trips : []).filter((trip) => trip.user === currentUser);
+  myTripsList.innerHTML = myTrips.length
+    ? myTrips.map((trip) => `<article class="msg-item"><strong>${trip.destination || '未知目的地'}</strong><p class="hint">${trip.departDate || '未知'} → ${trip.returnDate || '未知'} ｜ 预算 ¥${trip.budget || 0}</p><p class="hint">${trip.itinerary || '暂无安排'}</p></article>`).join('')
+    : '<p class="hint">你还没有发布行程。</p>';
 }
 
 function renderBadges() {
@@ -179,10 +191,11 @@ function loadState() {
     return {
       profile: parsed.profile || { avatar: defaultAvatar },
       actions: parsed.actions || { like: [], dislike: [], save: [] },
-      mediaPosts: Array.isArray(parsed.mediaPosts) ? parsed.mediaPosts : []
+      mediaPosts: Array.isArray(parsed.mediaPosts) ? parsed.mediaPosts : [],
+      trips: Array.isArray(parsed.trips) ? parsed.trips : []
     };
   } catch {
-    return { profile: { avatar: defaultAvatar }, actions: { like: [], dislike: [], save: [] }, mediaPosts: [] };
+    return { profile: { avatar: defaultAvatar }, actions: { like: [], dislike: [], save: [] }, mediaPosts: [], trips: [] };
   }
 }
 
@@ -225,4 +238,15 @@ function fileToDataUrl(file) {
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
+}
+
+function recordAdminEvent(type, payload = {}) {
+  try {
+    const list = JSON.parse(localStorage.getItem(ADMIN_EVENTS_KEY) || '[]');
+    const next = Array.isArray(list) ? list : [];
+    next.push({ id: crypto.randomUUID(), user: currentUser, type, payload, createdAt: new Date().toISOString() });
+    localStorage.setItem(ADMIN_EVENTS_KEY, JSON.stringify(next.slice(-500)));
+  } catch {
+    // ignore
+  }
 }

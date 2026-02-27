@@ -72,6 +72,7 @@ const USERS_KEY = 'romanticJourneyUsers';
 const CURRENT_USER_KEY = 'romanticJourneyCurrentUser';
 const SOCIAL_KEY = 'romanticJourneySocial';
 const LANG_KEY = 'romanticJourneyLang';
+const ADMIN_EVENTS_KEY = 'romanticJourneyAdminEvents';
 const defaultAvatar = 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=160&q=80';
 
 
@@ -137,6 +138,7 @@ function applyI18n() {
   if (sendBtn) sendBtn.textContent = t('send');
   if (msgTabChats) msgTabChats.textContent = t('msgChats');
   if (msgTabSystem) msgTabSystem.textContent = t('msgSystem');
+  if (seedBtn) seedBtn.textContent = currentLang === 'en' ? 'Query' : '查询';
   if (messageSidebarText) messageSidebarText.textContent = t('messageTitle');
 }
 
@@ -299,6 +301,7 @@ tripForm.addEventListener('submit', (event) => {
     createdAt: new Date().toISOString()
   };
   state.trips = [newTrip, ...state.trips].slice(0, 30);
+  recordAdminEvent('publish-trip', { tripId: newTrip.id, destination: newTrip.destination });
   tripForm.reset();
   hydratePersonaFilters();
   persist();
@@ -329,6 +332,7 @@ mediaForm.addEventListener('submit', async (event) => {
     });
   }
   state.mediaPosts = [...payload, ...state.mediaPosts].slice(0, 20);
+  recordAdminEvent('publish-diary', { count: payload.length });
   mediaForm.reset();
   updateMediaInputByType();
   persist();
@@ -336,15 +340,8 @@ mediaForm.addEventListener('submit', async (event) => {
 });
 
 seedBtn.addEventListener('click', () => {
-  state = structuredClone(defaultState);
-  social = loadSocial();
-  applyI18n();
-hydrateProfile();
-  hydratePersonaFilters();
-  persist();
   render();
-  syncUserChip();
-  closeProfilePanel();
+  searchInput.focus();
 });
 
 profileToggle.addEventListener('click', toggleProfilePanel);
@@ -434,6 +431,7 @@ tripList.addEventListener('click', (event) => {
     state.actions.like = liked ? state.actions.like.filter((item) => item !== id) : [...state.actions.like, id];
     trip.likeCount = Math.max(0, (trip.likeCount || 0) + (liked ? -1 : 1));
     if (!liked && trip.user && trip.user !== currentNicknameAuth) addNotification(trip.user, `${currentNicknameAuth} ${t('likeTripNotice')}：${trip.destination}`);
+    recordAdminEvent(liked ? 'unlike-trip' : 'like-trip', { tripId: trip.id });
   } else {
     ['dislike', 'save'].forEach((key) => {
       if (key !== action) state.actions[key] = state.actions[key].filter((item) => item !== id);
@@ -479,6 +477,7 @@ tripList.addEventListener('submit', (event) => {
   const replyTo = replyMatch ? replyMatch[1] : '';
   const cleanText = replyMatch ? replyMatch[2] : textValue;
   trip.comments.push({ id: crypto.randomUUID(), user: currentNicknameAuth, avatar: state.profile.avatar || defaultAvatar, replyTo, text: cleanText, pinned: false, createdAt: new Date().toISOString() });
+  recordAdminEvent('comment-trip', { tripId: trip.id });
   if (trip.user && trip.user !== currentNicknameAuth) addNotification(trip.user, `${currentNicknameAuth} ${t('commentTripNotice')}：${textValue}`);
   if (input) input.value = '';
   persist();
@@ -976,6 +975,17 @@ function addNotification(user, title) {
   persistSocial();
 }
 
+function recordAdminEvent(type, payload = {}) {
+  try {
+    const list = JSON.parse(localStorage.getItem(ADMIN_EVENTS_KEY) || '[]');
+    const next = Array.isArray(list) ? list : [];
+    next.push({ id: crypto.randomUUID(), user: currentNicknameAuth, type, payload, createdAt: new Date().toISOString() });
+    localStorage.setItem(ADMIN_EVENTS_KEY, JSON.stringify(next.slice(-500)));
+  } catch {
+    // ignore
+  }
+}
+
 function updateMediaInputByType() {
   const type = mediaType.value;
   if (type === '视频') {
@@ -998,7 +1008,7 @@ function requireCurrentNickname() {
 function ensureUserRegistered(nickname, list) {
   const found = list.find((user) => user.nickname === nickname);
   if (found) return found;
-  const fallback = { nickname, password: '123456', firstLogin: false };
+  const fallback = { nickname, password: '123456', firstLogin: false, createdAt: '' };
   list.push(fallback);
   return fallback;
 }
@@ -1008,7 +1018,7 @@ function getUsers() {
     if (!Array.isArray(parsed)) return [];
     if (!parsed.length) return [];
     if (typeof parsed[0] === 'string') return parsed.map((nickname) => ({ nickname, password: '123456', firstLogin: false }));
-    return parsed.map((user) => ({ nickname: user.nickname || user.username, password: user.password || '123456', firstLogin: Boolean(user.firstLogin) })).filter((user) => user.nickname);
+    return parsed.map((user) => ({ nickname: user.nickname || user.username, password: user.password || '123456', firstLogin: Boolean(user.firstLogin), createdAt: user.createdAt || '' })).filter((user) => user.nickname);
   } catch {
     return [];
   }
