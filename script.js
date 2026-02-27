@@ -363,8 +363,8 @@ tripList.addEventListener('click', (event) => {
 });
 
 tripList.addEventListener('click', (event) => {
-  const avatar = event.target.closest('.author-avatar');
-  if (!avatar) return;
+  const authorHit = event.target.closest('.author-avatar, .author-row');
+  if (!authorHit) return;
   const id = event.target.closest('[data-id]')?.dataset.id;
   const trip = state.trips.find((item) => item.id === id);
   if (!trip) return;
@@ -484,6 +484,8 @@ function renderTrips() {
     const avatarEl = fragment.querySelector('.author-avatar');
     avatarEl.src = trip.avatar || defaultAvatar;
     avatarEl.title = `点击查看 ${trip.user} 的个人信息`;
+    const authorRow = fragment.querySelector('.author-row');
+    if (authorRow) authorRow.title = `点击查看 ${trip.user} 的个人信息`;
     fragment.querySelector('.meta').textContent = `${trip.departDate} → ${trip.returnDate} ｜预算 ¥${trip.budget} ｜点赞 ${trip.likeCount || 0}`;
     fragment.querySelector('.publish').textContent = `发布时间：${formatTime(trip.createdAt)}`;
     const review = trip.review || { score: 5.0, count: 1, highlights: [] };

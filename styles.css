@@ -263,6 +263,7 @@ input[type="file"]::file-selector-button:hover {
   gap: .65rem;
   align-items: center;
   margin-bottom: .2rem;
+  cursor: pointer;
 }
 .author-avatar {
   width: 46px;
