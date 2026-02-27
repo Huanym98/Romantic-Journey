@@ -62,6 +62,8 @@ const personChatBtn = document.querySelector('#personChatBtn');
 const navLinks = document.querySelectorAll('.nav-links a[data-page]');
 const homeMain = document.querySelector('#homeMain');
 const myHomeMain = document.querySelector('#myHomeMain');
+const layoutWrap = document.querySelector('#layoutWrap');
+const messageNav = document.querySelector('#messageNav');
 const messageUnreadBadge = document.querySelector('#messageUnreadBadge');
 const sectionTripTitle = document.querySelector('#sectionTripTitle');
 const sectionMatchTitle = document.querySelector('#sectionMatchTitle');
@@ -597,6 +599,8 @@ function setActivePage(page) {
   const showMyHome = page === 'my-home';
   if (homeMain) homeMain.hidden = showMyHome;
   if (myHomeMain) myHomeMain.hidden = !showMyHome;
+  if (messageNav) messageNav.hidden = showMyHome;
+  if (layoutWrap) layoutWrap.classList.toggle('my-home-mode', showMyHome);
   navLinks.forEach((link) => {
     link.classList.toggle('active', (link.dataset.page || 'home') === page);
   });
