@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Romantic Journey · 我的主页</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="topbar-inner">
+        <div class="brand"><img src="assets/logo.svg" alt="浪漫之旅 Logo" /></div>
+        <nav class="nav-links">
+          <a href="index.html">首页</a>
+          <a href="index.html">找搭子</a>
+          <a href="index.html">行程广场</a>
+          <a href="index.html">旅行社区</a>
+          <a href="my-home.html" class="active">我的主页</a>
+        </nav>
+        <label class="lang-switch" for="langSelect">
+          <select id="langSelect" aria-label="Language">
+            <option value="zh-CN">中文</option>
+            <option value="en">English</option>
+          </select>
+        </label>
+        <button id="profileToggle" class="user-chip" type="button">
+          <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=200&q=80" alt="用户头像" />
+          <span>
+            <strong id="currentNickname">旅行喵喵</strong>
+            <small>个人资料</small>
+          </span>
+        </button>
+      </div>
+    </header>
+
+    <section class="hero-strip">
+      <h1>我的旅行主页</h1>
+      <p>仅展示你的旅行记忆、国家足迹和成就勋章。</p>
+    </section>
+
+    <main class="layout" style="max-width:1300px;margin:.9rem auto 2rem;padding:0 1rem;">
+      <section class="card">
+        <h2>我的旅行主页</h2>
+        <div class="profile-grid">
+          <section>
+            <h3>旅行记忆墙（图片 / 视频）</h3>
+            <form id="mediaForm" class="grid media-form">
+              <label>内容类型 <select id="mediaType" name="type"><option value="图片">图片</option><option value="视频">视频</option></select></label>
+              <label>目的地 <input required name="location" placeholder="例如：冰岛" /></label>
+              <label>地点打卡 <input id="checkinInput" name="checkin" placeholder="例如：东京塔 观景台" /></label>
+              <label>上传内容 <input id="coverFile" type="file" name="coverFile" accept="image/*" multiple /></label>
+              <label class="full-width"><button id="checkinNowBtn" type="button" class="ghost">📍 一键打卡当前时间</button></label>
+              <label>标题 <input required name="caption" placeholder="极光追逐日记" /></label>
+              <button type="submit">发布到主页</button>
+            </form>
+            <div id="mediaList" class="media-wall"></div>
+          </section>
+          <section>
+            <h3>国家足迹与成就勋章</h3>
+            <div id="countryList" class="country-list"></div>
+            <div id="badgeList" class="badge-list"></div>
+          </section>
+        </div>
+      </section>
+    </main>
+
+    <template id="mediaTemplate">
+      <article class="media-item" data-id="">
+        <img alt="旅行分享封面" loading="lazy" />
+        <div>
+          <p class="media-title"></p>
+          <p class="media-meta"></p>
+          <p class="media-checkin"></p>
+          <button class="ghost media-like" data-action="like-media" type="button">👍 赞主页</button>
+          <button class="danger media-delete" data-action="delete-media" type="button">删除</button>
+        </div>
+      </article>
+    </template>
+
+    <script src="my-home.js"></script>
+  </body>
+</html>
