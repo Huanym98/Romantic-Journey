@@ -79,7 +79,7 @@ const I18N = {
     groupNeedFriend: '请先互相关注至少 1 位好友，再发起群聊。', groupPickPrompt: '请输入群成员昵称，逗号分隔。可选：', groupInvalid: '未选择有效好友。', groupNamePrompt: '请输入群聊名称（可选）',
     personTitle: ' 的个人信息', follow: '关注', unfollow: '取消关注', block: '拉黑', unblock: '取消拉黑', startChat: '发起聊天',
     noChats: '暂无聊天窗口，可先点行程卡头像查看个人信息并发起聊天。',
-    msgChats: '聊天消息', msgSystem: '系统消息', likeTripNotice: '赞了你的行程', likeHomeNotice: '赞了你的主页', commentTripNotice: '评论了你的行程', followNotice: '关注了你', deleteComment: '删除评论', clearComments: '清空评论', messageTitle: '消息', aiGenerate: '🤖 AI 自动生成', aiFillFields: '请先填写目的地、日期、预算、标签和景点。',
+    msgChats: '聊天消息', msgSystem: '系统消息', likeTripNotice: '赞了你的行程', likeHomeNotice: '赞了你的主页', commentTripNotice: '评论了你的行程', followNotice: '关注了你', deleteComment: '删除评论', clearComments: '清空评论', replyComment: '回复', pinComment: '置顶', unpinComment: '取消置顶', authorTag: '作者', messageTitle: '消息', aiGenerate: '🤖 AI 自动生成', aiFillFields: '请先填写目的地、日期、预算、标签和景点。',
     languageLabel: '语言'
   },
   en: {
@@ -92,7 +92,7 @@ const I18N = {
     groupNeedFriend: 'Please mutually follow at least one friend before creating a group.', groupPickPrompt: 'Enter member nicknames, comma-separated. Available: ', groupInvalid: 'No valid friend selected.', groupNamePrompt: 'Enter group name (optional)',
     personTitle: "'s profile", follow: 'Follow', unfollow: 'Unfollow', block: 'Block', unblock: 'Unblock', startChat: 'Start Chat',
     noChats: 'No chats yet. Click an avatar in trip cards to open profile and start chatting.',
-    msgChats: 'Chats', msgSystem: 'System', likeTripNotice: 'liked your trip', likeHomeNotice: 'liked your homepage', commentTripNotice: 'commented on your trip', followNotice: 'followed you', deleteComment: 'Delete', clearComments: 'Clear all', messageTitle: 'Messages', aiGenerate: '🤖 Auto-generate with AI', aiFillFields: 'Please fill destination, dates, budget, tags and spots first.',
+    msgChats: 'Chats', msgSystem: 'System', likeTripNotice: 'liked your trip', likeHomeNotice: 'liked your homepage', commentTripNotice: 'commented on your trip', followNotice: 'followed you', deleteComment: 'Delete', clearComments: 'Clear all', replyComment: 'Reply', pinComment: 'Pin', unpinComment: 'Unpin', authorTag: 'Author', messageTitle: 'Messages', aiGenerate: '🤖 Auto-generate with AI', aiFillFields: 'Please fill destination, dates, budget, tags and spots first.',
     languageLabel: 'Language'
   }
 };
@@ -410,6 +410,27 @@ tripList.addEventListener('click', (event) => {
     return;
   }
 
+  if (action === 'reply-comment') {
+    const nickname = button.dataset.commentUser || '';
+    const form = event.target.closest('[data-id]')?.querySelector('.trip-comment-form');
+    const input = form?.querySelector('input[name="comment"]');
+    if (!input) return;
+    input.value = nickname ? `@${nickname} ` : '';
+    input.focus();
+    return;
+  }
+
+  if (action === 'toggle-pin-comment') {
+    if (trip.user !== currentNicknameAuth) return;
+    const commentId = button.dataset.commentId;
+    const target = (Array.isArray(trip.comments) ? trip.comments : []).find((item) => (item.id || '') === commentId);
+    if (!target) return;
+    target.pinned = !target.pinned;
+    persist();
+    render();
+    return;
+  }
+
   if (action === 'connect') {
     state.actions.connect = state.actions.connect.includes(id) ? state.actions.connect : [...state.actions.connect, id];
     openDirectChat(trip.user);
@@ -464,7 +485,10 @@ tripList.addEventListener('submit', (event) => {
   const textValue = String(input?.value || '').trim();
   if (!trip || !textValue) return;
   trip.comments = Array.isArray(trip.comments) ? trip.comments : [];
-  trip.comments.push({ id: crypto.randomUUID(), user: currentNicknameAuth, avatar: state.profile.avatar || defaultAvatar, text: textValue, createdAt: new Date().toISOString() });
+  const replyMatch = textValue.match(/^@([^\s]+)\s+(.*)$/);
+  const replyTo = replyMatch ? replyMatch[1] : '';
+  const cleanText = replyMatch ? replyMatch[2] : textValue;
+  trip.comments.push({ id: crypto.randomUUID(), user: currentNicknameAuth, avatar: state.profile.avatar || defaultAvatar, replyTo, text: cleanText, pinned: false, createdAt: new Date().toISOString() });
   if (trip.user && trip.user !== currentNicknameAuth) addNotification(trip.user, `${currentNicknameAuth} ${t('commentTripNotice')}：${textValue}`);
   if (input) input.value = '';
   persist();
@@ -647,11 +671,21 @@ function renderTrips() {
 
     const commentList = fragment.querySelector('.trip-comments-list');
     const comments = Array.isArray(trip.comments) ? trip.comments : [];
-    commentList.innerHTML = comments.length
-      ? comments.slice(-5).map((c) => {
+    const orderedComments = [...comments].sort((a, b) => Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)) || new Date(a.createdAt) - new Date(b.createdAt));
+    commentList.innerHTML = orderedComments.length
+      ? orderedComments.slice(-8).map((c) => {
         const removable = canDeleteComment(c, trip);
-        const avatar = c.avatar || getUserAvatar(c.user);
-        return `<article class="trip-comment-item"><img src="${avatar}" alt="${c.user}" class="comment-avatar" data-user="${c.user}" title="${currentLang === 'en' ? 'Open profile' : '查看个人信息'}" /><div><p><strong>${c.user}</strong>：${c.text}</p><small>${formatTime(c.createdAt || new Date().toISOString())}</small></div>${removable ? `<button type="button" class="ghost" data-action="delete-comment" data-comment-id="${c.id || ''}">${t('deleteComment')}</button>` : ''}</article>`;
+        const avatar = escapeHtml(c.avatar || getUserAvatar(c.user));
+        const safeUser = escapeHtml(c.user);
+        const safeCommentId = escapeHtml(c.id || '');
+        const safeReplyTo = escapeHtml(c.replyTo || '');
+        const safeText = escapeHtml(c.text || '');
+        const authorBadge = c.user === trip.user ? `<span class="comment-author-badge">${t('authorTag')}</span>` : '';
+        const pinBtn = trip.user === currentNicknameAuth ? `<button type="button" class="ghost" data-action="toggle-pin-comment" data-comment-id="${safeCommentId}">${c.pinned ? t('unpinComment') : t('pinComment')}</button>` : '';
+        const replyBtn = `<button type="button" class="ghost" data-action="reply-comment" data-comment-user="${safeUser}">${t('replyComment')}</button>`;
+        const pinMark = c.pinned ? `<span class="comment-pin">📌</span>` : '';
+        const replyPrefix = safeReplyTo ? `<span class="hint">@${safeReplyTo} </span>` : '';
+        return `<article class="trip-comment-item"><img src="${avatar}" alt="${safeUser}" class="comment-avatar" data-user="${safeUser}" title="${currentLang === 'en' ? 'Open profile' : '查看个人信息'}" /><div><div class="comment-head"><strong>${safeUser}</strong><span>${pinMark}${authorBadge}</span></div><p>${replyPrefix}${safeText}</p><small>${formatTime(c.createdAt || new Date().toISOString())}</small></div><div class="comment-actions">${replyBtn}${pinBtn}${removable ? `<button type="button" class="ghost" data-action="delete-comment" data-comment-id="${safeCommentId}">${t('deleteComment')}</button>` : ''}</div></article>`;
       }).join('')
       : `<p class="hint">${currentLang === 'en' ? 'No comments yet.' : '暂无评论'}</p>`;
     const form = fragment.querySelector('.trip-comment-form');
@@ -832,6 +866,9 @@ function openPersonDialog(targetUser) {
   const isSelf = targetUser === currentNicknameAuth;
   personFollowBtn.textContent = isFollowing(currentNicknameAuth, targetUser) ? t('unfollow') : t('follow');
   personBlockBtn.textContent = isBlocked(currentNicknameAuth, targetUser) ? t('unblock') : t('block');
+  personFollowBtn.hidden = isSelf;
+  personBlockBtn.hidden = isSelf;
+  personChatBtn.hidden = isSelf;
   personFollowBtn.disabled = isSelf;
   personBlockBtn.disabled = isSelf;
   personChatBtn.disabled = isBlockedEitherWay(currentNicknameAuth, targetUser) || isSelf;
@@ -871,6 +908,16 @@ function getUserAvatar(nickname) {
   const trip = state.trips.find((item) => item.user === nickname);
   return trip?.avatar || defaultAvatar;
 }
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
 function canDeleteComment(comment, trip) {
   if (!comment || !trip) return false;
   return comment.user === currentNicknameAuth || trip.user === currentNicknameAuth;
@@ -967,7 +1014,7 @@ function loadState() {
         badges: Array.isArray(trip.badges) ? trip.badges : [],
         avatar: trip.avatar || defaultAvatar,
         review: trip.review || { score: 5.0, count: 1, highlights: [] },
-        comments: Array.isArray(trip.comments) ? trip.comments.map((c) => ({ id: c.id || crypto.randomUUID(), user: c.user || '匿名用户', avatar: c.avatar || '', text: c.text || '', createdAt: c.createdAt || new Date().toISOString() })) : [],
+        comments: Array.isArray(trip.comments) ? trip.comments.map((c) => ({ id: c.id || crypto.randomUUID(), user: c.user || '匿名用户', avatar: c.avatar || '', replyTo: c.replyTo || '', text: c.text || '', pinned: Boolean(c.pinned), createdAt: c.createdAt || new Date().toISOString() })) : [],
         trust: trip.trust || { score: 4.5, completion: 90, verified: false }
       }))
     };

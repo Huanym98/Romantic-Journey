@@ -613,3 +613,32 @@ input[type="file"]::file-selector-button:hover {
   justify-self: start;
   margin-top: .3rem;
 }
+
+
+.comment-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: .35rem;
+}
+.comment-author-badge {
+  display: inline-block;
+  padding: 0 .35rem;
+  border-radius: 999px;
+  font-size: .72rem;
+  color: #9a3412;
+  background: #ffedd5;
+  border: 1px solid #fdba74;
+}
+.comment-pin {
+  margin-right: .2rem;
+}
+.comment-actions {
+  display: inline-flex;
+  flex-direction: column;
+  gap: .25rem;
+}
+.comment-actions button {
+  padding: .2rem .4rem;
+  font-size: .75rem;
+}
