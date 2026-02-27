@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Romantic Journey · 登录 / 注册</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="auth-page">
+    <main class="auth-card">
+      <img src="assets/logo.svg" alt="浪漫之旅 Logo" class="auth-logo" />
+      <h1>账号登录 / 注册</h1>
+      <p class="hint">输入昵称和密码后，系统会自动判断是新注册还是已有账号登录。</p>
+
+      <form id="registerForm" class="grid auth-form">
+        <label class="full-width">昵称（展示名，需唯一）
+          <input name="nickname" required placeholder="输入昵称，例如：旅行喵喵" maxlength="20" />
+        </label>
+        <label class="full-width">密码
+          <input name="password" id="passwordInput" required type="password" placeholder="至少8位，含大小写字母+数字+符号" minlength="8" maxlength="64" />
+        </label>
+        <button type="submit" class="full-width">继续</button>
+      </form>
+      <p class="hint">密码复杂度建议：至少8位，包含大写、小写、数字和特殊符号。</p>
+      <p id="registerMessage" class="hint"></p>
+    </main>
+
+    <script src="register.js"></script>
+  </body>
+</html>
