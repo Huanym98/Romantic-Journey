@@ -746,15 +746,24 @@ input[type="file"]::file-selector-button:hover {
   gap: .55rem;
 }
 .search-result-link {
+  text-decoration: none;
+  color: inherit;
+}
+.search-result-account {
   display: grid;
   grid-template-columns: 38px 1fr;
   align-items: center;
   gap: .55rem;
-  text-decoration: none;
-  color: inherit;
 }
-.search-result-link p {
+.search-result-account p {
   grid-column: 2;
+}
+.search-result-trip {
+  display: block;
+}
+.search-result-trip strong {
+  display: block;
+  margin-bottom: .2rem;
 }
 .search-avatar {
   width: 38px;
