@@ -710,16 +710,20 @@ function renderTrips() {
 }
 
 function renderStats() {
-  const following = getFollowing(currentNicknameAuth).length;
-  const friends = getFriends().length;
-  const blocked = getBlocked(currentNicknameAuth).length;
+  if (!statsBox) return;
+  const likes = Array.isArray(state.actions?.like) ? state.actions.like.length : 0;
+  const saves = Array.isArray(state.actions?.save) ? state.actions.save.length : 0;
+  const following = Number(getFollowing(currentNicknameAuth).length || 0);
+  const friends = Number(getFriends().length || 0);
+  const blocked = Number(getBlocked(currentNicknameAuth).length || 0);
   statsBox.innerHTML = [
-    [t('statsLike'), state.actions.like.length], [t('statsSave'), state.actions.save.length],
+    [t('statsLike'), likes], [t('statsSave'), saves],
     [t('statsFollowing'), following], [t('statsFriends'), friends], [t('statsBlocked'), blocked]
-  ].map(([name, count]) => `<div>${name}<strong>${count}</strong></div>`).join('');
+  ].map(([name, count]) => `<div>${name}<strong>${Number(count) || 0}</strong></div>`).join('');
 }
 
 function renderMedia() {
+  if (!mediaList || !mediaTemplate) return;
   mediaList.innerHTML = '';
   state.mediaPosts.forEach((post) => {
     const fragment = mediaTemplate.content.cloneNode(true);
@@ -736,14 +740,21 @@ function renderMedia() {
   });
 }
 
+function countryToFlag(country) {
+  const map = { 中国: '🇨🇳', 美国: '🇺🇸', 日本: '🇯🇵', 韩国: '🇰🇷', 英国: '🇬🇧', 法国: '🇫🇷', 德国: '🇩🇪', 意大利: '🇮🇹', 西班牙: '🇪🇸', 瑞士: '🇨🇭', 冰岛: '🇮🇸', 泰国: '🇹🇭', 新加坡: '🇸🇬', 马来西亚: '🇲🇾', 印度尼西亚: '🇮🇩', 澳大利亚: '🇦🇺', 新西兰: '🇳🇿', 加拿大: '🇨🇦' };
+  return map[country] || '🌍';
+}
+
 function renderCountries() {
-  const countries = [...new Set(state.mediaPosts.map((post) => post.location))];
+  if (!countryList) return;
+  const countries = [...new Set((state.mediaPosts || []).map((post) => post.location).filter(Boolean))];
   countryList.innerHTML = countries.length
-    ? countries.map((country) => `<span class="country-pill">🌍 ${country}</span>`).join('')
+    ? countries.map((country) => `<span class="country-pill">${countryToFlag(country)} ${country}</span>`).join('')
     : '<p class="hint">先发布一条旅行图片/视频，点亮你的国家足迹。</p>';
 }
 
 function renderBadges() {
+  if (!badgeList) return;
   const unlocked = [];
   if (state.actions.like.length >= 1) unlocked.push(['👍 人气观察员', '第一次给行程点赞']);
   if (state.mediaPosts.length >= 1) unlocked.push(['📸 旅行记录官', '首次上传图片/视频内容']);

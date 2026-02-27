@@ -122,10 +122,15 @@ function renderMedia() {
   });
 }
 
+function countryToFlag(country) {
+  const map = { 中国: '🇨🇳', 美国: '🇺🇸', 日本: '🇯🇵', 韩国: '🇰🇷', 英国: '🇬🇧', 法国: '🇫🇷', 德国: '🇩🇪', 意大利: '🇮🇹', 西班牙: '🇪🇸', 瑞士: '🇨🇭', 冰岛: '🇮🇸', 泰国: '🇹🇭', 新加坡: '🇸🇬', 马来西亚: '🇲🇾', 印度尼西亚: '🇮🇩', 澳大利亚: '🇦🇺', 新西兰: '🇳🇿', 加拿大: '🇨🇦' };
+  return map[country] || '🌍';
+}
+
 function renderCountries() {
   const countries = [...new Set(state.mediaPosts.map((post) => post.location).filter(Boolean))];
   countryList.innerHTML = countries.length
-    ? countries.map((country) => `<span class="country-pill">🌍 ${country}</span>`).join('')
+    ? countries.map((country) => `<span class="country-pill">${countryToFlag(country)} ${country}</span>`).join('')
     : '<p class="hint">先发布一条旅行图片/视频，点亮你的国家足迹。</p>';
 }
 
