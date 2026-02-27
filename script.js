@@ -585,9 +585,9 @@ chatSendForm.addEventListener('submit', (event) => {
 });
 
 messageChats.addEventListener('click', (event) => {
-  const btn = event.target.closest('button[data-chat-id]');
-  if (!btn) return;
-  openChat(btn.dataset.chatId);
+  const item = event.target.closest('[data-chat-id]');
+  if (!item) return;
+  openChat(item.dataset.chatId);
 });
 
 chatTabs.addEventListener('click', (event) => {
@@ -750,7 +750,13 @@ function renderBadges() {
 function renderMessageCenter() {
   const chats = social.chats.filter((chat) => chat.members.includes(currentNicknameAuth));
   messageChats.innerHTML = chats.length
-    ? chats.map((chat) => `<article class="msg-item"><strong>${chat.type === 'group' ? '👥' : '💬'} ${chat.name || chat.members.filter((x) => x !== currentNicknameAuth).join('、')}</strong><p class="hint">${chat.messages.length ? chat.messages[chat.messages.length - 1].text : (currentLang === 'en' ? 'No message yet' : '暂无消息')}</p><button class="ghost" data-chat-id="${chat.id}" type="button">${currentLang === 'en' ? 'Open' : '打开'}</button></article>`).join('')
+    ? chats.map((chat) => {
+      const peer = chat.members.find((name) => name !== currentNicknameAuth) || '';
+      const title = chat.type === 'group' ? (chat.name || chat.members.filter((x) => x !== currentNicknameAuth).join('、')) : peer;
+      const avatar = chat.type === 'group' ? defaultAvatar : getUserAvatar(peer);
+      const latestText = chat.messages.length ? chat.messages[chat.messages.length - 1].text : (currentLang === 'en' ? 'No message yet' : '暂无消息');
+      return `<article class="msg-item msg-chat-item" data-chat-id="${chat.id}"><img src="${avatar}" alt="${title}" class="msg-avatar" /><div><strong>${title}</strong><p class="hint">${latestText}</p></div></article>`;
+    }).join('')
     : `<p class="hint">${t('noChats')}</p>`;
 
   const notices = getNotifications(currentNicknameAuth);
@@ -764,10 +770,13 @@ function renderChatList() {
   if (!mine.length) {
     chatWorkspace.hidden = true;
     chatTabs.innerHTML = '';
+    activeChatId = null;
     return;
   }
-  chatWorkspace.hidden = false;
   chatTabs.innerHTML = mine.map((chat) => `<button class="ghost" data-chat-id="${chat.id}" type="button">${chat.type === 'group' ? '👥' : '💬'} ${chat.name || chat.members.filter((x) => x !== currentNicknameAuth).join('、')}</button>`).join('');
+  const activeChat = mine.find((chat) => chat.id === activeChatId);
+  chatWorkspace.hidden = !activeChat;
+  if (activeChat) paintChat(activeChat);
 }
 
 function openDirectChat(target) {
