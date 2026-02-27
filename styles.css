@@ -152,6 +152,18 @@ label { display: grid; gap: .35rem; font-size: .92rem; color: var(--muted); }
   color: #334155;
 }
 .skill-group input { margin: 0; }
+.avatar-uploader {
+  display: flex;
+  align-items: center;
+  gap: .8rem;
+}
+.avatar-preview {
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--border);
+}
 input, select, textarea, button {
   border-radius: 10px;
   border: 1px solid var(--border);

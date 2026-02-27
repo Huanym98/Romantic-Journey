@@ -19,6 +19,9 @@ const profileToggle = document.querySelector('#profileToggle');
 const currentNickname = document.querySelector('#currentNickname');
 const headerAvatar = document.querySelector('#profileToggle img');
 const avatarFileInput = document.querySelector('#avatarFile');
+const avatarPickBtn = document.querySelector('#avatarPickBtn');
+const avatarPreview = document.querySelector('#avatarPreview');
+const avatarHint = document.querySelector('#avatarHint');
 const switchAccountBtn = document.querySelector('#switchAccountBtn');
 const logoutBtn = document.querySelector('#logoutBtn');
 const profilePanel = document.querySelector('#profilePanel');
@@ -122,6 +125,19 @@ syncUserChip();
 updateMediaInputByType();
 if (forceProfileCompletion) openProfilePanel();
 
+avatarPickBtn.addEventListener('click', () => avatarFileInput.click());
+avatarFileInput.addEventListener('change', async () => {
+  const file = avatarFileInput.files?.[0];
+  if (!file) return;
+  if (!file.type.startsWith('image/')) {
+    avatarHint.textContent = '请选择图片文件作为头像。';
+    avatarFileInput.value = '';
+    return;
+  }
+  avatarPreview.src = await fileToDataUrl(file);
+  avatarHint.textContent = '已选择新头像，点击“保存资料”后生效。';
+});
+
 profileForm.addEventListener('submit', async (event) => {
   event.preventDefault();
   const formData = new FormData(profileForm);
@@ -139,6 +155,7 @@ profileForm.addEventListener('submit', async (event) => {
     alert('首次登录请上传头像后再继续。');
     return;
   }
+  avatarHint.textContent = '头像已保存，可随时再次更换。';
 
   state.profile = profile;
   if (currentUserRecord.firstLogin) {
@@ -388,6 +405,8 @@ function hydrateProfile() {
     const field = profileForm.elements.namedItem(key);
     if (field) field.value = value;
   });
+  avatarPreview.src = state.profile.avatar || defaultAvatar;
+  avatarHint.textContent = state.profile.avatar ? '当前头像已设置，可点击按钮更换。' : '支持 jpg/png/webp，保存资料后生效。';
   const selectedSkills = new Set(state.profile.skills || []);
   profileForm.querySelectorAll('input[name="skills"]').forEach((input) => { input.checked = selectedSkills.has(input.value); });
 }
