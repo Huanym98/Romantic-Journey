@@ -1,15 +1,21 @@
 const USERS_KEY = 'romanticJourneyUsers';
 const CURRENT_USER_KEY = 'romanticJourneyCurrentUser';
 const STORAGE_KEY = 'romanticJourneyState';
+const defaultAvatar = 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=160&q=80';
 
 const queryInput = document.querySelector('#queryInput');
 const queryResult = document.querySelector('#queryResult');
+const queryForm = document.querySelector('#queryForm');
 
 requireCurrentNickname();
 renderResults('');
 
 queryInput?.addEventListener('input', () => {
   renderResults(String(queryInput.value || '').trim());
+});
+queryForm?.addEventListener('submit', (event) => {
+  event.preventDefault();
+  renderResults(String(queryInput?.value || '').trim());
 });
 
 function requireCurrentNickname() {
@@ -21,14 +27,38 @@ function requireCurrentNickname() {
   return nickname;
 }
 
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
 function getUsers() {
   try {
     const parsed = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
     if (!Array.isArray(parsed)) return [];
-    if (parsed.length && typeof parsed[0] === 'string') return parsed;
-    return parsed.map((item) => item.nickname || item.username).filter(Boolean);
+    if (parsed.length && typeof parsed[0] === 'string') return parsed.map((nickname) => ({ nickname, avatar: getUserAvatar(nickname) }));
+    return parsed
+      .map((item) => ({ nickname: item.nickname || item.username, avatar: getUserAvatar(item.nickname || item.username) }))
+      .filter((item) => item.nickname);
   } catch {
     return [];
+  }
+}
+
+function getUserAvatar(nickname) {
+  if (!nickname) return defaultAvatar;
+  try {
+    const parsed = JSON.parse(localStorage.getItem(`${STORAGE_KEY}:${nickname}`) || '{}');
+    if (parsed.profile?.avatar) return parsed.profile.avatar;
+    const trips = Array.isArray(parsed.trips) ? parsed.trips : [];
+    const ownTrip = trips.find((trip) => trip.user === nickname);
+    return ownTrip?.avatar || defaultAvatar;
+  } catch {
+    return defaultAvatar;
   }
 }
 
@@ -56,7 +86,7 @@ function renderResults(keyword) {
   const users = getUsers();
   const trips = getAllTrips();
 
-  const matchedUsers = keyword ? users.filter((name) => contains(name, keyword)) : users.slice(0, 8);
+  const matchedUsers = keyword ? users.filter((item) => contains(item.nickname, keyword)) : users.slice(0, 8);
   const matchedTrips = keyword
     ? trips.filter((trip) => {
       const tags = Array.isArray(trip.tags) ? trip.tags.join(' ') : '';
@@ -65,18 +95,29 @@ function renderResults(keyword) {
     })
     : trips.slice(0, 8);
 
-  const userHtml = matchedUsers.length
-    ? matchedUsers.map((name) => `<article class="msg-item"><strong>👤 ${name}</strong></article>`).join('')
-    : '<p class="hint">未匹配到用户</p>';
+  const accountHtml = matchedUsers.length
+    ? matchedUsers.map((item) => {
+      const safeName = escapeHtml(item.nickname);
+      const safeAvatar = escapeHtml(item.avatar || defaultAvatar);
+      return `<a class="msg-item search-result-link" href="account.html?user=${encodeURIComponent(item.nickname)}"><img class="search-avatar" src="${safeAvatar}" alt="${safeName}" /><strong>${safeName}</strong></a>`;
+    }).join('')
+    : '<p class="hint">未匹配到账户</p>';
 
   const tripHtml = matchedTrips.length
-    ? matchedTrips.map((trip) => `<article class="msg-item"><strong>🧭 ${trip.user || '匿名'} · ${trip.destination || '未知目的地'}</strong><p class="hint">${trip.itinerary || '暂无行程描述'}</p></article>`).join('')
+    ? matchedTrips.map((trip) => {
+      const user = escapeHtml(trip.user || '匿名');
+      const destination = escapeHtml(trip.destination || '未知目的地');
+      const itinerary = escapeHtml(trip.itinerary || '暂无行程描述');
+      const id = encodeURIComponent(trip.id || '');
+      const owner = encodeURIComponent(trip.user || '');
+      return `<a class="msg-item search-result-link" href="trip-detail.html?id=${id}&user=${owner}"><strong>🧭 ${user} · ${destination}</strong><p class="hint">${itinerary}</p></a>`;
+    }).join('')
     : '<p class="hint">未匹配到行程</p>';
 
   queryResult.innerHTML = `
-    <h3>用户结果</h3>
-    ${userHtml}
-    <h3 style="margin-top:.7rem;">行程结果</h3>
+    <h3>账户</h3>
+    ${accountHtml}
+    <h3 style="margin-top:.7rem;">行程</h3>
     ${tripHtml}
   `;
 }

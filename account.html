@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Romantic Journey · 查询</title>
+    <title>Romantic Journey · 账户主页</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -15,22 +15,15 @@
           <a href="index.html">行程广场</a>
           <a href="index.html">旅行社区</a>
           <a href="my-home.html">我的主页</a>
-          <a href="search.html" class="nav-search-link active"><span class="search-icon" aria-hidden="true"></span><span class="sr-only">查询</span></a>
+          <a href="search.html" class="nav-search-link"><span class="search-icon" aria-hidden="true"></span><span class="sr-only">查询</span></a>
         </nav>
       </div>
     </header>
 
     <main class="layout" style="max-width:1000px;margin:1rem auto 2rem;padding:0 1rem;">
-      <section class="card">
-        <h2>查询用户 / 行程</h2>
-        <form id="queryForm" class="search-form">
-          <input id="queryInput" placeholder="输入关键词：用户名、目的地、标签、景点..." maxlength="50" />
-          <button type="submit" class="secondary">搜索</button>
-        </form>
-        <div id="queryResult" class="message-panel" style="margin-top:.8rem;"></div>
-      </section>
+      <section class="card" id="accountCard"></section>
     </main>
 
-    <script src="search.js"></script>
+    <script src="account.js"></script>
   </body>
 </html>
