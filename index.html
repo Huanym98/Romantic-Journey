@@ -134,6 +134,16 @@
         <div class="stats" id="stats"></div>
       </section>
 
+      <section id="messageNav" class="card message-nav">
+        <h2 id="messageSidebarTitle"><span id="messageSidebarText">消息</span><span id="messageUnreadBadge" class="message-unread-badge" hidden>0</span></h2>
+        <div class="message-tabs">
+          <button id="msgTabChats" class="secondary" type="button">聊天消息</button>
+          <button id="msgTabSystem" class="ghost" type="button">系统消息</button>
+        </div>
+        <div id="messageChats" class="message-panel"></div>
+        <div id="messageSystem" class="message-panel" hidden></div>
+      </section>
+
     </main>
 
     <main id="myHomeMain" class="layout" hidden>
@@ -161,16 +171,6 @@
         </div>
       </section>
     </main>
-
-    <aside id="messageNav" class="message-nav card">
-      <h2 id="messageSidebarTitle"><span id="messageSidebarText">消息</span><span id="messageUnreadBadge" class="message-unread-badge" hidden>0</span></h2>
-      <div class="message-tabs">
-        <button id="msgTabChats" class="secondary" type="button">聊天消息</button>
-        <button id="msgTabSystem" class="ghost" type="button">系统消息</button>
-      </div>
-      <div id="messageChats" class="message-panel"></div>
-      <div id="messageSystem" class="message-panel" hidden></div>
-    </aside>
   </div>
 
     <dialog id="personDialog" class="person-dialog">

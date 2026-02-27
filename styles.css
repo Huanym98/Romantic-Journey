@@ -140,7 +140,7 @@ body {
   margin: .9rem auto 2rem;
   padding: 0 1rem;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1rem;
   align-items: start;
 }
@@ -150,12 +150,6 @@ body {
   gap: 1rem;
 }
 
-.layout-wrap.my-home-mode {
-  grid-template-columns: minmax(0, 1fr);
-}
-.layout-wrap.my-home-mode #myHomeMain {
-  width: 100%;
-}
 .card {
   background: var(--card);
   border: 1px solid var(--border);
@@ -631,10 +625,9 @@ input[type="file"]::file-selector-button:hover {
 }
 
 .message-nav {
-  position: sticky;
-  top: 5rem;
-  max-height: calc(100vh - 6rem);
-  overflow: auto;
+  position: static;
+  max-height: none;
+  overflow: visible;
 }
 
 
