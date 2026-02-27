@@ -570,3 +570,24 @@ input[type="file"]::file-selector-button:hover {
 .trip-comment-form input {
   flex: 1;
 }
+
+
+.trip-comment-item {
+  display: grid;
+  grid-template-columns: 28px 1fr auto;
+  gap: .45rem;
+  align-items: start;
+}
+.comment-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--border);
+}
+.trip-comment-item p {
+  margin: 0;
+}
+.trip-comment-item small {
+  color: #64748b;
+}

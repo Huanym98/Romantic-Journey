@@ -77,7 +77,7 @@ const I18N = {
     groupNeedFriend: '请先互相关注至少 1 位好友，再发起群聊。', groupPickPrompt: '请输入群成员昵称，逗号分隔。可选：', groupInvalid: '未选择有效好友。', groupNamePrompt: '请输入群聊名称（可选）',
     personTitle: ' 的个人信息', follow: '关注', unfollow: '取消关注', block: '拉黑', unblock: '取消拉黑', startChat: '发起聊天',
     noChats: '暂无聊天窗口，可先点行程卡头像查看个人信息并发起聊天。',
-    msgChats: '聊天消息', msgSystem: '系统消息', likeTripNotice: '赞了你的行程', likeHomeNotice: '赞了你的主页', commentTripNotice: '评论了你的行程', followNotice: '关注了你',
+    msgChats: '聊天消息', msgSystem: '系统消息', likeTripNotice: '赞了你的行程', likeHomeNotice: '赞了你的主页', commentTripNotice: '评论了你的行程', followNotice: '关注了你', deleteComment: '删除评论', clearComments: '清空评论',
     languageLabel: '语言'
   },
   en: {
@@ -90,7 +90,7 @@ const I18N = {
     groupNeedFriend: 'Please mutually follow at least one friend before creating a group.', groupPickPrompt: 'Enter member nicknames, comma-separated. Available: ', groupInvalid: 'No valid friend selected.', groupNamePrompt: 'Enter group name (optional)',
     personTitle: "'s profile", follow: 'Follow', unfollow: 'Unfollow', block: 'Block', unblock: 'Unblock', startChat: 'Start Chat',
     noChats: 'No chats yet. Click an avatar in trip cards to open profile and start chatting.',
-    msgChats: 'Chats', msgSystem: 'System', likeTripNotice: 'liked your trip', likeHomeNotice: 'liked your homepage', commentTripNotice: 'commented on your trip', followNotice: 'followed you',
+    msgChats: 'Chats', msgSystem: 'System', likeTripNotice: 'liked your trip', likeHomeNotice: 'liked your homepage', commentTripNotice: 'commented on your trip', followNotice: 'followed you', deleteComment: 'Delete', clearComments: 'Clear all',
     languageLabel: 'Language'
   }
 };
@@ -367,6 +367,26 @@ tripList.addEventListener('click', (event) => {
   const trip = state.trips.find((item) => item.id === id);
   if (!id || !action || !trip) return;
 
+  if (action === 'delete-comment') {
+    const commentId = button.dataset.commentId;
+    if (!commentId) return;
+    trip.comments = (Array.isArray(trip.comments) ? trip.comments : []).filter((comment) => {
+      if ((comment.id || '') !== commentId) return true;
+      return !canDeleteComment(comment, trip);
+    });
+    persist();
+    render();
+    return;
+  }
+
+  if (action === 'clear-comments') {
+    if (trip.user !== currentNicknameAuth) return;
+    trip.comments = [];
+    persist();
+    render();
+    return;
+  }
+
   if (action === 'connect') {
     state.actions.connect = state.actions.connect.includes(id) ? state.actions.connect : [...state.actions.connect, id];
     openDirectChat(trip.user);
@@ -412,7 +432,7 @@ tripList.addEventListener('submit', (event) => {
   const textValue = String(input?.value || '').trim();
   if (!trip || !textValue) return;
   trip.comments = Array.isArray(trip.comments) ? trip.comments : [];
-  trip.comments.push({ user: currentNicknameAuth, text: textValue, createdAt: new Date().toISOString() });
+  trip.comments.push({ id: crypto.randomUUID(), user: currentNicknameAuth, avatar: state.profile.avatar || defaultAvatar, text: textValue, createdAt: new Date().toISOString() });
   if (trip.user && trip.user !== currentNicknameAuth) addNotification(trip.user, `${currentNicknameAuth} ${t('commentTripNotice')}：${textValue}`);
   if (input) input.value = '';
   persist();
@@ -595,7 +615,22 @@ function renderTrips() {
 
     const commentList = fragment.querySelector('.trip-comments-list');
     const comments = Array.isArray(trip.comments) ? trip.comments : [];
-    commentList.innerHTML = comments.length ? comments.slice(-3).map((c) => `<p><strong>${c.user}</strong>：${c.text}</p>`).join('') : `<p class="hint">${currentLang === 'en' ? 'No comments yet.' : '暂无评论'}</p>`;
+    commentList.innerHTML = comments.length
+      ? comments.slice(-5).map((c) => {
+        const removable = canDeleteComment(c, trip);
+        const avatar = c.avatar || getUserAvatar(c.user);
+        return `<article class="trip-comment-item"><img src="${avatar}" alt="${c.user}" class="comment-avatar" /><div><p><strong>${c.user}</strong>：${c.text}</p><small>${formatTime(c.createdAt || new Date().toISOString())}</small></div>${removable ? `<button type="button" class="ghost" data-action="delete-comment" data-comment-id="${c.id || ''}">${t('deleteComment')}</button>` : ''}</article>`;
+      }).join('')
+      : `<p class="hint">${currentLang === 'en' ? 'No comments yet.' : '暂无评论'}</p>`;
+    const form = fragment.querySelector('.trip-comment-form');
+    if (trip.user === currentNicknameAuth && comments.length) {
+      const clearBtn = document.createElement('button');
+      clearBtn.type = 'button';
+      clearBtn.className = 'danger';
+      clearBtn.dataset.action = 'clear-comments';
+      clearBtn.textContent = t('clearComments');
+      form.append(clearBtn);
+    }
     tripList.append(fragment);
   });
 }
@@ -797,6 +832,18 @@ personChatBtn.addEventListener('click', () => {
 });
 
 
+
+function getUserAvatar(nickname) {
+  if (!nickname) return defaultAvatar;
+  if (nickname === currentNicknameAuth) return state.profile.avatar || defaultAvatar;
+  const trip = state.trips.find((item) => item.user === nickname);
+  return trip?.avatar || defaultAvatar;
+}
+function canDeleteComment(comment, trip) {
+  if (!comment || !trip) return false;
+  return comment.user === currentNicknameAuth || trip.user === currentNicknameAuth;
+}
+
 function getNotifications(user) { return Array.isArray(social.notifications?.[user]) ? social.notifications[user] : []; }
 function addNotification(user, title) {
   if (!user || user === currentNicknameAuth) return;
@@ -888,7 +935,7 @@ function loadState() {
         badges: Array.isArray(trip.badges) ? trip.badges : [],
         avatar: trip.avatar || defaultAvatar,
         review: trip.review || { score: 5.0, count: 1, highlights: [] },
-        comments: Array.isArray(trip.comments) ? trip.comments : [],
+        comments: Array.isArray(trip.comments) ? trip.comments.map((c) => ({ id: c.id || crypto.randomUUID(), user: c.user || '匿名用户', avatar: c.avatar || '', text: c.text || '', createdAt: c.createdAt || new Date().toISOString() })) : [],
         trust: trip.trust || { score: 4.5, completion: 90, verified: false }
       }))
     };
