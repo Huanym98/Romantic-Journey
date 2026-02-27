@@ -34,6 +34,47 @@
       </div>
     </header>
 
+
+
+    <aside id="profilePanel" class="profile-panel" hidden>
+      <div class="panel-head">
+        <h2>编辑个人资料</h2>
+        <button id="panelClose" class="ghost" type="button">关闭</button>
+      </div>
+      <form id="profileForm" class="grid">
+        <label>生日 <input type="date" name="birthday" /></label>
+        <label>MBTI
+          <select name="mbti">
+            <option value="ENFP">ENFP</option><option value="ENFJ">ENFJ</option><option value="ENTP">ENTP</option><option value="ENTJ">ENTJ</option>
+            <option value="INFP">INFP</option><option value="INFJ">INFJ</option><option value="INTP">INTP</option><option value="INTJ">INTJ</option>
+            <option value="ESFP">ESFP</option><option value="ESFJ">ESFJ</option><option value="ESTP">ESTP</option><option value="ESTJ">ESTJ</option>
+            <option value="ISFP">ISFP</option><option value="ISFJ">ISFJ</option><option value="ISTP">ISTP</option><option value="ISTJ">ISTJ</option>
+          </select>
+        </label>
+        <label>星座
+          <select name="zodiac">
+            <option value="白羊座">白羊座</option><option value="金牛座">金牛座</option><option value="双子座">双子座</option><option value="巨蟹座">巨蟹座</option>
+            <option value="狮子座">狮子座</option><option value="处女座">处女座</option><option value="天秤座">天秤座</option><option value="天蝎座">天蝎座</option>
+            <option value="射手座">射手座</option><option value="摩羯座">摩羯座</option><option value="水瓶座">水瓶座</option><option value="双鱼座">双鱼座</option>
+          </select>
+        </label>
+        <label>旅行节奏 <select name="pace"><option value="特种兵式">特种兵式</option><option value="平衡">平衡</option><option value="慢游">慢游</option></select></label>
+        <label>预算级别 <select name="budgetLevel"><option value="经济">经济</option><option value="舒适">舒适</option><option value="品质">品质</option></select></label>
+        <label>起床时间偏好 <select name="wakeUp"><option value="早起">早起</option><option value="自然醒">自然醒</option><option value="夜猫">夜猫</option></select></label>
+        <label>社交强度 <select name="social"><option value="外向">外向</option><option value="适中">适中</option><option value="安静">安静</option></select></label>
+        <label class="full-width">头像设置
+          <div class="avatar-uploader">
+            <img id="avatarPreview" class="avatar-preview" src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=200&q=80" alt="头像预览" />
+            <div>
+              <button id="avatarPickBtn" type="button" class="ghost">上传 / 更换头像</button>
+            </div>
+          </div>
+          <input type="file" id="avatarFile" name="avatarFile" accept="image/*" hidden />
+        </label>
+        <button type="submit">保存资料</button>
+      </form>
+    </aside>
+
     <section class="hero-strip">
       <h1>我的旅行主页</h1>
       <p>仅展示你的旅行记忆、国家足迹和成就勋章。</p>

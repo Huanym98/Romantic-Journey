@@ -772,3 +772,17 @@ input[type="file"]::file-selector-button:hover {
   object-fit: cover;
   border: 1px solid var(--border);
 }
+
+
+.my-trip-item {
+  cursor: pointer;
+}
+.my-trip-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+}
+.my-trip-head button {
+  cursor: pointer;
+}

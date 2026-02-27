@@ -15,9 +15,17 @@ const mediaTemplate = document.querySelector('#mediaTemplate');
 const countryList = document.querySelector('#countryList');
 const badgeList = document.querySelector('#badgeList');
 const currentNickname = document.querySelector('#currentNickname');
+const profileToggle = document.querySelector('#profileToggle');
 const headerAvatar = document.querySelector('#profileToggle img');
 const langSelect = document.querySelector('#langSelect');
 const myTripsList = document.querySelector('#myTripsList');
+
+const profilePanel = document.querySelector('#profilePanel');
+const panelClose = document.querySelector('#panelClose');
+const profileForm = document.querySelector('#profileForm');
+const avatarPreview = document.querySelector('#avatarPreview');
+const avatarFile = document.querySelector('#avatarFile');
+const avatarPickBtn = document.querySelector('#avatarPickBtn');
 
 const currentUser = requireCurrentNickname();
 let state = loadState();
@@ -30,8 +38,45 @@ if (langSelect) {
   langSelect.addEventListener('change', () => localStorage.setItem(LANG_KEY, langSelect.value));
 }
 
+hydrateProfileForm();
 updateMediaInputByType();
 render();
+
+profileToggle?.addEventListener('click', () => {
+  if (!profilePanel) return;
+  profilePanel.hidden ? openProfilePanel() : closeProfilePanel();
+});
+panelClose?.addEventListener('click', closeProfilePanel);
+document.addEventListener('click', (event) => {
+  if (!profilePanel || profilePanel.hidden) return;
+  if (profilePanel.contains(event.target) || profileToggle?.contains(event.target)) return;
+  closeProfilePanel();
+});
+avatarPickBtn?.addEventListener('click', () => avatarFile?.click());
+avatarFile?.addEventListener('change', async () => {
+  const file = avatarFile.files?.[0];
+  if (!file || !file.type.startsWith('image/')) return;
+  const dataUrl = await fileToDataUrl(file);
+  if (avatarPreview) avatarPreview.src = dataUrl;
+  state.profile.avatar = dataUrl;
+});
+profileForm?.addEventListener('submit', (event) => {
+  event.preventDefault();
+  const form = new FormData(profileForm);
+  state.profile = {
+    ...state.profile,
+    birthday: String(form.get('birthday') || ''),
+    mbti: String(form.get('mbti') || ''),
+    zodiac: String(form.get('zodiac') || ''),
+    pace: String(form.get('pace') || ''),
+    budgetLevel: String(form.get('budgetLevel') || ''),
+    wakeUp: String(form.get('wakeUp') || ''),
+    social: String(form.get('social') || '')
+  };
+  persist();
+  render();
+  closeProfilePanel();
+});
 
 mediaType?.addEventListener('change', updateMediaInputByType);
 checkinNowBtn?.addEventListener('click', () => {
@@ -96,12 +141,28 @@ mediaList?.addEventListener('click', (event) => {
   }
 });
 
+myTripsList?.addEventListener('click', (event) => {
+  const tripCard = event.target.closest('[data-trip-id]');
+  if (!tripCard) return;
+  const tripId = tripCard.dataset.tripId;
+  const actionBtn = event.target.closest('button[data-action]');
+  if (actionBtn?.dataset.action === 'delete-trip') {
+    state.trips = state.trips.filter((trip) => trip.id !== tripId);
+    recordAdminEvent('delete-trip', { tripId });
+    persist();
+    render();
+    return;
+  }
+  window.location.href = `trip-detail.html?id=${encodeURIComponent(tripId)}&user=${encodeURIComponent(currentUser)}`;
+});
+
 function render() {
   renderMedia();
   renderCountries();
   renderBadges();
   renderMyTrips();
   if (headerAvatar) headerAvatar.src = state.profile?.avatar || defaultAvatar;
+  if (avatarPreview) avatarPreview.src = state.profile?.avatar || defaultAvatar;
 }
 
 function renderMedia() {
@@ -142,7 +203,17 @@ function renderMyTrips() {
   if (!myTripsList) return;
   const myTrips = (Array.isArray(state.trips) ? state.trips : []).filter((trip) => trip.user === currentUser);
   myTripsList.innerHTML = myTrips.length
-    ? myTrips.map((trip) => `<article class="msg-item"><strong>${trip.destination || '未知目的地'}</strong><p class="hint">${trip.departDate || '未知'} → ${trip.returnDate || '未知'} ｜ 预算 ¥${trip.budget || 0}</p><p class="hint">${trip.itinerary || '暂无安排'}</p></article>`).join('')
+    ? myTrips.map((trip) => `
+      <article class="msg-item my-trip-item" data-trip-id="${trip.id}">
+        <div class="my-trip-head">
+          <strong>${escapeHtml(trip.destination || '未知目的地')}</strong>
+          <button class="danger" data-action="delete-trip" type="button">删除</button>
+        </div>
+        <p class="hint">${escapeHtml(trip.departDate || '未知')} → ${escapeHtml(trip.returnDate || '未知')} ｜ 预算 ¥${escapeHtml(trip.budget || 0)}</p>
+        <p class="hint">发布者：${escapeHtml(trip.user || currentUser)} ｜ 点赞：${trip.likeCount || 0} ｜ 评论：${Array.isArray(trip.comments) ? trip.comments.length : 0}</p>
+        <p class="hint">${escapeHtml(trip.itinerary || '暂无安排')}</p>
+      </article>
+    `).join('')
     : '<p class="hint">你还没有发布行程。</p>';
 }
 
@@ -161,6 +232,31 @@ function getFriends() {
   const follows = social.follows || {};
   const mine = new Set(follows[currentUser] || []);
   return [...mine].filter((name) => (follows[name] || []).includes(currentUser));
+}
+
+function hydrateProfileForm() {
+  if (!profileForm) return;
+  const profile = state.profile || {};
+  profileForm.elements.birthday.value = profile.birthday || '';
+  profileForm.elements.mbti.value = profile.mbti || 'ENFP';
+  profileForm.elements.zodiac.value = profile.zodiac || '白羊座';
+  profileForm.elements.pace.value = profile.pace || '平衡';
+  profileForm.elements.budgetLevel.value = profile.budgetLevel || '舒适';
+  profileForm.elements.wakeUp.value = profile.wakeUp || '自然醒';
+  profileForm.elements.social.value = profile.social || '适中';
+  if (avatarPreview) avatarPreview.src = profile.avatar || defaultAvatar;
+}
+
+function openProfilePanel() {
+  profilePanel.hidden = false;
+  profilePanel.classList.add('open');
+  profileToggle?.setAttribute('aria-expanded', 'true');
+}
+
+function closeProfilePanel() {
+  profilePanel.hidden = true;
+  profilePanel.classList.remove('open');
+  profileToggle?.setAttribute('aria-expanded', 'false');
 }
 
 function updateMediaInputByType() {
@@ -216,6 +312,7 @@ function persist() {
   base.profile = state.profile;
   base.actions = state.actions;
   base.mediaPosts = state.mediaPosts;
+  base.trips = state.trips;
   localStorage.setItem(userStorageKey(), JSON.stringify(base));
 }
 
@@ -223,6 +320,7 @@ function isOverseas(location) {
   const cn = ['北京', '上海', '广州', '深圳', '成都', '杭州', '重庆', '西安', '南京', '武汉', '苏州', '长沙'];
   return location && !cn.some((city) => String(location).includes(city));
 }
+
 function formatTime(iso) {
   const date = new Date(iso);
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -231,6 +329,7 @@ function formatTime(iso) {
   const minute = String(date.getMinutes()).padStart(2, '0');
   return `${date.getFullYear()}-${month}-${day} ${hour}:${minute}`;
 }
+
 function fileToDataUrl(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -238,6 +337,15 @@ function fileToDataUrl(file) {
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
 }
 
 function recordAdminEvent(type, payload = {}) {
