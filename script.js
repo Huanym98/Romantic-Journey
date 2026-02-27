@@ -437,6 +437,15 @@ tripList.addEventListener('click', (event) => {
 });
 
 tripList.addEventListener('click', (event) => {
+  if (event.target.closest('button, input, textarea, select, a')) return;
+
+  const commentAvatar = event.target.closest('.comment-avatar');
+  if (commentAvatar) {
+    const nickname = commentAvatar.dataset.user;
+    if (nickname) openPersonDialog(nickname);
+    return;
+  }
+
   const authorHit = event.target.closest('.author-avatar, .author-row');
   if (!authorHit) return;
   const id = event.target.closest('[data-id]')?.dataset.id;
@@ -642,7 +651,7 @@ function renderTrips() {
       ? comments.slice(-5).map((c) => {
         const removable = canDeleteComment(c, trip);
         const avatar = c.avatar || getUserAvatar(c.user);
-        return `<article class="trip-comment-item"><img src="${avatar}" alt="${c.user}" class="comment-avatar" /><div><p><strong>${c.user}</strong>：${c.text}</p><small>${formatTime(c.createdAt || new Date().toISOString())}</small></div>${removable ? `<button type="button" class="ghost" data-action="delete-comment" data-comment-id="${c.id || ''}">${t('deleteComment')}</button>` : ''}</article>`;
+        return `<article class="trip-comment-item"><img src="${avatar}" alt="${c.user}" class="comment-avatar" data-user="${c.user}" title="${currentLang === 'en' ? 'Open profile' : '查看个人信息'}" /><div><p><strong>${c.user}</strong>：${c.text}</p><small>${formatTime(c.createdAt || new Date().toISOString())}</small></div>${removable ? `<button type="button" class="ghost" data-action="delete-comment" data-comment-id="${c.id || ''}">${t('deleteComment')}</button>` : ''}</article>`;
       }).join('')
       : `<p class="hint">${currentLang === 'en' ? 'No comments yet.' : '暂无评论'}</p>`;
     const form = fragment.querySelector('.trip-comment-form');
