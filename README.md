@@ -23,7 +23,7 @@
 
 ## Supabase 对接（MVP 注册落库）
 
-前端已支持在 `register.html` 注册时同步写入 Supabase 的 `app_users` 与 `user_profiles`。
+前端已支持在本地 MVP 操作时同步写入 Supabase（注册、资料保存、发布行程、行程点赞/评论、发布笔记、笔记点赞、关注/拉黑、私聊/群聊消息）。
 
 在浏览器控制台执行一次配置（会写入 localStorage）：
 
@@ -32,7 +32,7 @@ localStorage.setItem('romanticJourneySupabaseUrl', 'https://<your-project-ref>.s
 localStorage.setItem('romanticJourneySupabaseAnonKey', '<your-anon-key>');
 ```
 
-配置后在注册页新建账号，即可在 Supabase 表中看到数据。
+配置后重新打开页面并执行完整流程，即可在 Supabase 各表中看到同步数据。
 
 ## 本地启动
 

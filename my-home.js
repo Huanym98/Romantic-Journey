@@ -3,6 +3,7 @@ const CURRENT_USER_KEY = 'romanticJourneyCurrentUser';
 const SOCIAL_KEY = 'romanticJourneySocial';
 const LANG_KEY = 'romanticJourneyLang';
 const ADMIN_EVENTS_KEY = 'romanticJourneyAdminEvents';
+const supabaseClient = window.RJSupabase || null;
 const defaultAvatar = 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=160&q=80';
 
 const mediaForm = document.querySelector('#mediaForm');
@@ -94,6 +95,7 @@ profileForm?.addEventListener('submit', (event) => {
     social: String(form.get('social') || '')
   };
   persist();
+  void syncProfileToSupabase();
   render();
   closeProfilePanel();
 });
@@ -132,6 +134,7 @@ mediaForm?.addEventListener('submit', async (event) => {
 
   state.mediaPosts = [...payload, ...state.mediaPosts].slice(0, 30);
   recordAdminEvent('publish-diary', { count: payload.length });
+  payload.forEach((post) => { void syncMediaPostToSupabase(post); });
   persist();
   mediaForm.reset();
   updateMediaInputByType();
@@ -162,6 +165,7 @@ mediaList?.addEventListener('click', (event) => {
     post.likes = Array.isArray(post.likes) ? post.likes : [];
     const liked = post.likes.includes(currentUser);
     post.likes = liked ? post.likes.filter((name) => name !== currentUser) : [...post.likes, currentUser];
+    void syncMediaLikeToSupabase(post.id, !liked);
     persist();
     render();
   }
@@ -204,6 +208,35 @@ function loadStateByNickname(nickname) {
     return parsed && typeof parsed === 'object' ? parsed : {};
   } catch {
     return {};
+  }
+}
+
+
+
+async function syncProfileToSupabase() {
+  if (!supabaseClient?.isEnabled?.()) return;
+  try {
+    await supabaseClient.syncUserProfile(currentUser, state.profile);
+  } catch (error) {
+    console.error('[supabase-sync] my-home profile failed', error);
+  }
+}
+
+async function syncMediaPostToSupabase(post) {
+  if (!supabaseClient?.isEnabled?.()) return;
+  try {
+    await supabaseClient.syncMediaPost(post);
+  } catch (error) {
+    console.error('[supabase-sync] my-home media post failed', error);
+  }
+}
+
+async function syncMediaLikeToSupabase(postId, liked) {
+  if (!supabaseClient?.isEnabled?.()) return;
+  try {
+    await supabaseClient.syncMediaLike(postId, currentUser, liked);
+  } catch (error) {
+    console.error('[supabase-sync] my-home media like failed', error);
   }
 }
 

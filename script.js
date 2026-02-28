@@ -73,6 +73,7 @@ const CURRENT_USER_KEY = 'romanticJourneyCurrentUser';
 const SOCIAL_KEY = 'romanticJourneySocial';
 const LANG_KEY = 'romanticJourneyLang';
 const ADMIN_EVENTS_KEY = 'romanticJourneyAdminEvents';
+const supabaseClient = window.RJSupabase || null;
 const defaultAvatar = 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=160&q=80';
 
 
@@ -303,6 +304,7 @@ tripForm.addEventListener('submit', (event) => {
   };
   state.trips = [newTrip, ...state.trips].slice(0, 30);
   recordAdminEvent('publish-trip', { tripId: newTrip.id, destination: newTrip.destination });
+  void syncTripToSupabase(newTrip);
   tripForm.reset();
   hydratePersonaFilters();
   persist();
@@ -334,6 +336,7 @@ mediaForm?.addEventListener('submit', async (event) => {
   }
   state.mediaPosts = [...payload, ...state.mediaPosts].slice(0, 20);
   recordAdminEvent('publish-diary', { count: payload.length });
+  payload.forEach((post) => { void syncMediaPostToSupabase(post); });
   mediaForm.reset();
   updateMediaInputByType();
   persist();
@@ -433,6 +436,7 @@ tripList.addEventListener('click', (event) => {
     trip.likeCount = Math.max(0, (trip.likeCount || 0) + (liked ? -1 : 1));
     if (!liked && trip.user && trip.user !== currentNicknameAuth) addNotification(trip.user, `${currentNicknameAuth} ${t('likeTripNotice')}：${trip.destination}`);
     recordAdminEvent(liked ? 'unlike-trip' : 'like-trip', { tripId: trip.id });
+    void syncTripLikeToSupabase(trip.id, !liked);
   } else {
     ['dislike', 'save'].forEach((key) => {
       if (key !== action) state.actions[key] = state.actions[key].filter((item) => item !== id);
@@ -477,8 +481,10 @@ tripList.addEventListener('submit', (event) => {
   const replyMatch = textValue.match(/^@([^\s]+)\s+(.*)$/);
   const replyTo = replyMatch ? replyMatch[1] : '';
   const cleanText = replyMatch ? replyMatch[2] : textValue;
-  trip.comments.push({ id: crypto.randomUUID(), user: currentNicknameAuth, avatar: state.profile.avatar || defaultAvatar, replyTo, text: cleanText, pinned: false, createdAt: new Date().toISOString() });
+  const newComment = { id: crypto.randomUUID(), user: currentNicknameAuth, avatar: state.profile.avatar || defaultAvatar, replyTo, text: cleanText, pinned: false, createdAt: new Date().toISOString() };
+  trip.comments.push(newComment);
   recordAdminEvent('comment-trip', { tripId: trip.id });
+  void syncTripCommentToSupabase(trip.id, newComment);
   if (trip.user && trip.user !== currentNicknameAuth) addNotification(trip.user, `${currentNicknameAuth} ${t('commentTripNotice')}：${textValue}`);
   if (input) input.value = '';
   persist();
@@ -505,6 +511,7 @@ mediaList?.addEventListener('click', (event) => {
     const liked = post.likes.includes(currentNicknameAuth);
     post.likes = liked ? post.likes.filter((name) => name !== currentNicknameAuth) : [...post.likes, currentNicknameAuth];
     if (!liked && post.user && post.user !== currentNicknameAuth) addNotification(post.user, `${currentNicknameAuth} ${t('likeHomeNotice')}：${post.caption}`);
+    void syncMediaLikeToSupabase(post.id, !liked);
     persist();
     render();
   }
@@ -533,6 +540,7 @@ createGroupBtn.addEventListener('click', () => {
     messages: [{ sender: currentNicknameAuth, text: '群聊已创建，欢迎大家~', createdAt: new Date().toISOString() }]
   };
   social.chats.unshift(chat);
+  void syncChatToSupabase(chat);
   persistSocial();
   chatPlusMenu.hidden = true;
   chatPlusBtn.setAttribute('aria-expanded', 'false');
@@ -567,7 +575,9 @@ chatSendForm.addEventListener('submit', (event) => {
     alert(rule.reason);
     return;
   }
-  chat.messages.push({ sender: currentNicknameAuth, text, createdAt: new Date().toISOString() });
+  const newMsg = { sender: currentNicknameAuth, text, createdAt: new Date().toISOString() };
+  chat.messages.push(newMsg);
+  void syncChatMessageToSupabase(chat.id, newMsg);
   chatInput.value = '';
   persistSocial();
   paintChat(chat);
@@ -817,6 +827,7 @@ function openDirectChat(target) {
   if (!chat) {
     chat = { id: crypto.randomUUID(), type: 'dm', name: `${currentNicknameAuth} 与 ${target}`, members: [currentNicknameAuth, target], messages: [] };
     social.chats.unshift(chat);
+    void syncChatToSupabase(chat);
     persistSocial();
   }
   openChat(chat.id);
@@ -877,6 +888,7 @@ function toggleFollow(target) {
   const adding = !set.has(target);
   if (!adding) set.delete(target); else set.add(target);
   social.follows[currentNicknameAuth] = [...set];
+  void syncFollowToSupabase(target, adding);
   if (adding) addNotification(target, `${currentNicknameAuth} ${t('followNotice')}`);
 }
 function toggleBlock(target) {
@@ -884,6 +896,7 @@ function toggleBlock(target) {
   const set = new Set(getBlocked(currentNicknameAuth));
   if (set.has(target)) set.delete(target); else set.add(target);
   social.blocks[currentNicknameAuth] = [...set];
+  void syncBlockToSupabase(target, set.has(target));
 }
 function getFollowing(user) { return social.follows[user] || []; }
 function getBlocked(user) { return social.blocks[user] || []; }
@@ -984,6 +997,98 @@ function recordAdminEvent(type, payload = {}) {
     localStorage.setItem(ADMIN_EVENTS_KEY, JSON.stringify(next.slice(-500)));
   } catch {
     // ignore
+  }
+}
+
+
+
+async function syncProfileToSupabase() {
+  if (!supabaseClient?.isEnabled?.()) return;
+  try {
+    await supabaseClient.syncUserProfile(currentNicknameAuth, state.profile);
+  } catch (error) {
+    console.error('[supabase-sync] profile failed', error);
+  }
+}
+
+async function syncTripToSupabase(trip) {
+  if (!supabaseClient?.isEnabled?.()) return;
+  try {
+    await supabaseClient.syncTrip(trip);
+  } catch (error) {
+    console.error('[supabase-sync] trip failed', error);
+  }
+}
+
+async function syncTripLikeToSupabase(tripId, liked) {
+  if (!supabaseClient?.isEnabled?.()) return;
+  try {
+    await supabaseClient.syncTripLike(tripId, currentNicknameAuth, liked);
+  } catch (error) {
+    console.error('[supabase-sync] trip like failed', error);
+  }
+}
+
+async function syncTripCommentToSupabase(tripId, comment) {
+  if (!supabaseClient?.isEnabled?.()) return;
+  try {
+    await supabaseClient.syncTripComment(tripId, comment);
+  } catch (error) {
+    console.error('[supabase-sync] trip comment failed', error);
+  }
+}
+
+async function syncMediaPostToSupabase(post) {
+  if (!supabaseClient?.isEnabled?.()) return;
+  try {
+    await supabaseClient.syncMediaPost(post);
+  } catch (error) {
+    console.error('[supabase-sync] media post failed', error);
+  }
+}
+
+async function syncMediaLikeToSupabase(postId, liked) {
+  if (!supabaseClient?.isEnabled?.()) return;
+  try {
+    await supabaseClient.syncMediaLike(postId, currentNicknameAuth, liked);
+  } catch (error) {
+    console.error('[supabase-sync] media like failed', error);
+  }
+}
+
+async function syncChatToSupabase(chat) {
+  if (!supabaseClient?.isEnabled?.()) return;
+  try {
+    await supabaseClient.syncChat(chat, currentNicknameAuth);
+  } catch (error) {
+    console.error('[supabase-sync] chat failed', error);
+  }
+}
+
+async function syncChatMessageToSupabase(chatId, msg) {
+  if (!supabaseClient?.isEnabled?.()) return;
+  try {
+    await supabaseClient.syncChatMessage(chatId, msg.sender, msg.text, msg.createdAt);
+  } catch (error) {
+    console.error('[supabase-sync] chat message failed', error);
+  }
+}
+
+async function syncFollowToSupabase(target, following) {
+  if (!supabaseClient?.isEnabled?.()) return;
+  try {
+    await supabaseClient.syncFollow(currentNicknameAuth, target, following);
+  } catch (error) {
+    console.error('[supabase-sync] follow failed', error);
+  }
+}
+
+async function syncBlockToSupabase(target, blocked) {
+  if (!supabaseClient?.isEnabled?.()) return;
+  try {
+    await supabaseClient.syncBlock(currentNicknameAuth, target, blocked);
+  } catch (error) {
+    console.error('[supabase-sync] block failed', error);
   }
 }
 
