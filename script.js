@@ -66,6 +66,14 @@ const sectionTripTitle = document.querySelector('#sectionTripTitle');
 const sectionMatchTitle = document.querySelector('#sectionMatchTitle');
 const sectionStatsTitle = document.querySelector('#sectionStatsTitle');
 const sectionHomeTitle = document.querySelector('#sectionHomeTitle');
+const supportLikeBtn = document.querySelector('#supportLikeBtn');
+const supportLikeCount = document.querySelector('#supportLikeCount');
+const feedbackBtn = document.querySelector('#feedbackBtn');
+const feedbackDialog = document.querySelector('#feedbackDialog');
+const feedbackClose = document.querySelector('#feedbackClose');
+const feedbackForm = document.querySelector('#feedbackForm');
+const feedbackContent = document.querySelector('#feedbackContent');
+const feedbackCounter = document.querySelector('#feedbackCounter');
 
 const STORAGE_KEY = 'romanticJourneyState';
 const USERS_KEY = 'romanticJourneyUsers';
@@ -73,6 +81,7 @@ const CURRENT_USER_KEY = 'romanticJourneyCurrentUser';
 const SOCIAL_KEY = 'romanticJourneySocial';
 const LANG_KEY = 'romanticJourneyLang';
 const ADMIN_EVENTS_KEY = 'romanticJourneyAdminEvents';
+const SUPPORT_KEY = 'romanticJourneySiteSupport';
 const supabaseClient = window.RJSupabase || null;
 const defaultAvatar = 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=160&q=80';
 
@@ -199,6 +208,7 @@ let state = loadState();
 let social = loadSocial();
 let activeChatId = null;
 let activeProfileUser = null;
+let supportState = loadSupportState();
 
 applyI18n();
 hydrateProfile();
@@ -206,6 +216,8 @@ hydratePersonaFilters();
 syncUserChip();
 updateMediaInputByType();
 render();
+renderSupportPanel();
+bindSupportEvents();
 if (forceProfileCompletion) openProfilePanel();
 if (langSelect) {
   langSelect.value = currentLang;
@@ -987,6 +999,63 @@ function addNotification(user, title) {
   const list = getNotifications(user);
   social.notifications[user] = [...list, { id: crypto.randomUUID(), title, createdAt: new Date().toISOString() }].slice(-80);
   persistSocial();
+}
+
+
+
+function loadSupportState() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(SUPPORT_KEY) || '{}');
+    return {
+      likes: Number(parsed.likes || 0),
+      feedbacks: Array.isArray(parsed.feedbacks) ? parsed.feedbacks : []
+    };
+  } catch {
+    return { likes: 0, feedbacks: [] };
+  }
+}
+
+function persistSupportState() {
+  localStorage.setItem(SUPPORT_KEY, JSON.stringify(supportState));
+}
+
+function renderSupportPanel() {
+  if (supportLikeCount) supportLikeCount.textContent = String(supportState.likes || 0);
+  if (feedbackCounter && feedbackContent) feedbackCounter.textContent = String(feedbackContent.value.length);
+}
+
+function bindSupportEvents() {
+  supportLikeBtn?.addEventListener('click', () => {
+    supportState.likes = Number(supportState.likes || 0) + 1;
+    persistSupportState();
+    renderSupportPanel();
+    recordAdminEvent('support-like', { total: supportState.likes });
+  });
+
+  feedbackBtn?.addEventListener('click', () => {
+    feedbackDialog?.showModal();
+  });
+  feedbackClose?.addEventListener('click', () => feedbackDialog?.close());
+
+  feedbackContent?.addEventListener('input', () => {
+    if (!feedbackCounter) return;
+    feedbackCounter.textContent = String((feedbackContent.value || '').length);
+  });
+
+  feedbackForm?.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const data = new FormData(feedbackForm);
+    const content = String(data.get('content') || '').trim();
+    const email = String(data.get('email') || '').trim();
+    if (!content || !email) return;
+    const entry = { id: crypto.randomUUID(), user: currentNicknameAuth, content, email, createdAt: new Date().toISOString() };
+    supportState.feedbacks = [entry, ...supportState.feedbacks].slice(0, 200);
+    persistSupportState();
+    recordAdminEvent('feedback-submit', { email });
+    feedbackForm.reset();
+    renderSupportPanel();
+    feedbackDialog?.close();
+  });
 }
 
 function recordAdminEvent(type, payload = {}) {

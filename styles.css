@@ -821,3 +821,34 @@ input[type="file"]::file-selector-button:hover {
   font-size: .72rem;
   color: #475569;
 }
+
+
+.support-strip {
+  margin-top: .6rem;
+}
+.support-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.support-card h2 {
+  margin: 0 0 .2rem;
+}
+.support-actions {
+  display: flex;
+  align-items: center;
+  gap: .7rem;
+  flex-wrap: wrap;
+}
+.support-count {
+  margin: 0;
+  font-size: 1.02rem;
+}
+.support-count strong {
+  color: #e11d48;
+  font-size: 1.35rem;
+}
+.feedback-dialog textarea {
+  resize: vertical;
+}

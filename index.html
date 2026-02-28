@@ -38,6 +38,19 @@
       <h1>筛选更精准，结伴更靠谱</h1>
       <p>支持行程标签、详细安排、点赞热度、头像信息和口碑评价。</p>
     </section>
+    <section class="hero-strip support-strip">
+      <article class="card support-card">
+        <div>
+          <h2>支持 Romantic Journey</h2>
+          <p class="hint">你的每一次点赞，都是我们持续打磨产品的动力。</p>
+        </div>
+        <div class="support-actions">
+          <button id="supportLikeBtn" type="button">👍 点赞支持</button>
+          <p class="support-count">累计支持：<strong id="supportLikeCount">0</strong></p>
+          <button id="feedbackBtn" class="ghost" type="button">意见反馈</button>
+        </div>
+      </article>
+    </section>
 
     <aside id="profilePanel" class="profile-panel" hidden>
       <div class="panel-head">
@@ -152,6 +165,24 @@
   </div>
 
   
+
+
+    <dialog id="feedbackDialog" class="person-dialog feedback-dialog">
+      <div class="panel-head">
+        <h3>帮助与客服</h3>
+        <button id="feedbackClose" class="ghost" type="button">关闭</button>
+      </div>
+      <form id="feedbackForm" class="grid">
+        <label class="full-width">问题和意见
+          <textarea id="feedbackContent" name="content" maxlength="100" rows="5" placeholder="请填写你的功能建议，感谢你的支持～" required></textarea>
+          <small class="hint"><span id="feedbackCounter">0</span>/100</small>
+        </label>
+        <label class="full-width">联系方式（邮箱）
+          <input id="feedbackEmail" type="email" name="email" placeholder="例如：you@example.com" required />
+        </label>
+        <button type="submit">提交</button>
+      </form>
+    </dialog>
 
     <dialog id="personDialog" class="person-dialog">
       <div class="panel-head">
