@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Romantic Journey · 我的主页</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="topbar-inner">
+        <div class="brand"><img src="assets/logo.svg" alt="浪漫之旅 Logo" /></div>
+        <nav class="nav-links">
+          <a href="index.html">首页</a>
+          <a href="index.html">行程广场</a>
+          <a href="index.html">旅行社区</a>
+          <a href="my-home.html" class="active">我的主页</a>
+          <a href="search.html" class="nav-search-link" aria-label="查询页面" title="查询用户/行程"><span class="search-icon" aria-hidden="true"></span><span class="sr-only">查询</span></a>
+          <a href="admin.html" class="ghost">管理后台</a>
+        </nav>
+        <label class="lang-switch" for="langSelect">
+          <select id="langSelect" aria-label="Language">
+            <option value="zh-CN">中文</option>
+            <option value="en">English</option>
+          </select>
+        </label>
+        <button id="profileToggle" class="user-chip" type="button">
+          <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=200&q=80" alt="用户头像" />
+          <span>
+            <strong id="currentNickname">旅行喵喵</strong>
+            <small>个人资料</small>
+          </span>
+        </button>
+      </div>
+    </header>
+
+
+
+    <aside id="profilePanel" class="profile-panel" hidden>
+      <div class="panel-head">
+        <h2>编辑个人资料</h2>
+        <button id="panelClose" class="ghost" type="button">关闭</button>
+      </div>
+      <div class="account-actions">
+        <button id="switchAccountBtn" type="button" class="ghost">切换账户</button>
+        <button id="logoutBtn" type="button" class="danger">注销登录</button>
+      </div>
+      <form id="profileForm" class="grid">
+        <label>生日 <input type="date" name="birthday" /></label>
+        <label>MBTI
+          <select name="mbti">
+            <option value="ENFP">ENFP</option><option value="ENFJ">ENFJ</option><option value="ENTP">ENTP</option><option value="ENTJ">ENTJ</option>
+            <option value="INFP">INFP</option><option value="INFJ">INFJ</option><option value="INTP">INTP</option><option value="INTJ">INTJ</option>
+            <option value="ESFP">ESFP</option><option value="ESFJ">ESFJ</option><option value="ESTP">ESTP</option><option value="ESTJ">ESTJ</option>
+            <option value="ISFP">ISFP</option><option value="ISFJ">ISFJ</option><option value="ISTP">ISTP</option><option value="ISTJ">ISTJ</option>
+          </select>
+        </label>
+        <label>星座
+          <select name="zodiac">
+            <option value="白羊座">白羊座</option><option value="金牛座">金牛座</option><option value="双子座">双子座</option><option value="巨蟹座">巨蟹座</option>
+            <option value="狮子座">狮子座</option><option value="处女座">处女座</option><option value="天秤座">天秤座</option><option value="天蝎座">天蝎座</option>
+            <option value="射手座">射手座</option><option value="摩羯座">摩羯座</option><option value="水瓶座">水瓶座</option><option value="双鱼座">双鱼座</option>
+          </select>
+        </label>
+        <label>旅行节奏 <select name="pace"><option value="特种兵式">特种兵式</option><option value="平衡">平衡</option><option value="慢游">慢游</option></select></label>
+        <label>预算级别 <select name="budgetLevel"><option value="经济">经济</option><option value="舒适">舒适</option><option value="品质">品质</option></select></label>
+        <label>起床时间偏好 <select name="wakeUp"><option value="早起">早起</option><option value="自然醒">自然醒</option><option value="夜猫">夜猫</option></select></label>
+        <label>社交强度 <select name="social"><option value="外向">外向</option><option value="适中">适中</option><option value="安静">安静</option></select></label>
+        <label class="full-width">头像设置
+          <div class="avatar-uploader">
+            <img id="avatarPreview" class="avatar-preview" src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=200&q=80" alt="头像预览" />
+            <div>
+              <button id="avatarPickBtn" type="button" class="ghost">上传 / 更换头像</button>
+            </div>
+          </div>
+          <input type="file" id="avatarFile" name="avatarFile" accept="image/*" hidden />
+        </label>
+        <button type="submit">保存资料</button>
+      </form>
+    </aside>
+
+    <section class="hero-strip">
+      <h1>我的旅行主页</h1>
+      <p>仅展示你的旅行记忆、国家足迹和成就勋章。</p>
+    </section>
+
+    <main class="layout" style="max-width:1300px;margin:.9rem auto 2rem;padding:0 1rem;">
+      <section class="card">
+        <h2>我的旅行主页</h2>
+        <div class="profile-grid">
+          <section>
+            <h3>旅行记忆墙（图片 / 视频）</h3>
+            <form id="mediaForm" class="grid media-form">
+              <label>内容类型 <select id="mediaType" name="type"><option value="图片">图片</option><option value="视频">视频</option></select></label>
+              <label>目的地 <input required name="location" placeholder="例如：冰岛" /></label>
+              <label>地点打卡 <input id="checkinInput" name="checkin" placeholder="例如：东京塔 观景台" /></label>
+              <label>上传内容 <input id="coverFile" type="file" name="coverFile" accept="image/*" multiple /></label>
+              <label class="full-width"><button id="checkinNowBtn" type="button" class="ghost">📍 一键打卡当前时间</button></label>
+              <label>标题 <input required name="caption" placeholder="极光追逐日记" /></label>
+              <button type="submit">发布到主页</button>
+            </form>
+            <div id="mediaList" class="media-wall"></div>
+          </section>
+          <section>
+            <h3>国家足迹与成就勋章</h3>
+            <div id="countryList" class="country-list"></div>
+            <div id="badgeList" class="badge-list"></div>
+          </section>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>我发布的行程</h2>
+        <div id="myTripsList" class="cards"></div>
+      </section>
+    </main>
+
+    <template id="mediaTemplate">
+      <article class="media-item" data-id="">
+        <img alt="旅行分享封面" loading="lazy" />
+        <div>
+          <p class="media-title"></p>
+          <p class="media-meta"></p>
+          <p class="media-checkin"></p>
+          <button class="ghost media-like" data-action="like-media" type="button">👍 赞主页</button>
+          <div class="media-likers"></div>
+          <button class="danger media-delete" data-action="delete-media" type="button">删除</button>
+        </div>
+      </article>
+    </template>
+
+    <dialog id="likerDialog" class="person-dialog">
+      <div class="panel-head">
+        <h3>点赞用户信息</h3>
+        <button id="likerDialogClose" class="ghost" type="button">关闭</button>
+      </div>
+      <div class="person-hero">
+        <img id="likerAvatar" class="person-avatar" alt="用户头像" />
+        <div>
+          <p id="likerMeta" class="meta"></p>
+          <p id="likerRelation" class="relationship"></p>
+        </div>
+      </div>
+      <p id="likerSkills" class="hint"></p>
+      <div class="person-actions">
+        <button id="likerHomeBtn" class="secondary" type="button">查看主页</button>
+      </div>
+    </dialog>
+
+    <script src="my-home.js"></script>
+  </body>
+</html>
