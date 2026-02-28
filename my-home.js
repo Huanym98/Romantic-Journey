@@ -26,6 +26,16 @@ const profileForm = document.querySelector('#profileForm');
 const avatarPreview = document.querySelector('#avatarPreview');
 const avatarFile = document.querySelector('#avatarFile');
 const avatarPickBtn = document.querySelector('#avatarPickBtn');
+const switchAccountBtn = document.querySelector('#switchAccountBtn');
+const logoutBtn = document.querySelector('#logoutBtn');
+
+const likerDialog = document.querySelector('#likerDialog');
+const likerDialogClose = document.querySelector('#likerDialogClose');
+const likerAvatar = document.querySelector('#likerAvatar');
+const likerMeta = document.querySelector('#likerMeta');
+const likerRelation = document.querySelector('#likerRelation');
+const likerSkills = document.querySelector('#likerSkills');
+const likerHomeBtn = document.querySelector('#likerHomeBtn');
 
 const currentUser = requireCurrentNickname();
 let state = loadState();
@@ -47,6 +57,16 @@ profileToggle?.addEventListener('click', () => {
   profilePanel.hidden ? openProfilePanel() : closeProfilePanel();
 });
 panelClose?.addEventListener('click', closeProfilePanel);
+switchAccountBtn?.addEventListener('click', () => {
+  closeProfilePanel();
+  window.location.href = 'register.html';
+});
+logoutBtn?.addEventListener('click', () => {
+  closeProfilePanel();
+  localStorage.removeItem(CURRENT_USER_KEY);
+  window.location.href = 'register.html';
+});
+
 document.addEventListener('click', (event) => {
   if (!profilePanel || profilePanel.hidden) return;
   if (profilePanel.contains(event.target) || profileToggle?.contains(event.target)) return;
@@ -119,6 +139,12 @@ mediaForm?.addEventListener('submit', async (event) => {
 });
 
 mediaList?.addEventListener('click', (event) => {
+  const likerAvatarEl = event.target.closest('.liker-chip img[data-user]');
+  if (likerAvatarEl) {
+    openLikerDialog(likerAvatarEl.dataset.user || '');
+    return;
+  }
+
   const button = event.target.closest('button[data-action]');
   if (!button) return;
   const id = button.closest('[data-id]')?.dataset.id;
@@ -156,6 +182,31 @@ myTripsList?.addEventListener('click', (event) => {
   window.location.href = `trip-detail.html?id=${encodeURIComponent(tripId)}&user=${encodeURIComponent(currentUser)}`;
 });
 
+
+likerDialogClose?.addEventListener('click', () => likerDialog?.close());
+
+function openLikerDialog(nickname) {
+  if (!likerDialog || !nickname) return;
+  const userState = loadStateByNickname(nickname);
+  const profile = userState?.profile || {};
+  if (likerAvatar) likerAvatar.src = profile.avatar || defaultAvatar;
+  if (likerMeta) likerMeta.textContent = `${nickname} ｜ MBTI: ${profile.mbti || '未知'} ｜ 星座: ${profile.zodiac || '未知'}`;
+  if (likerRelation) likerRelation.textContent = `旅行节奏：${profile.pace || '未知'} ｜ 作息：${profile.wakeUp || '未知'}`;
+  const skills = Array.isArray(profile.skills) && profile.skills.length ? profile.skills.join('、') : '暂无';
+  if (likerSkills) likerSkills.textContent = `技能标签：${skills}`;
+  if (likerHomeBtn) likerHomeBtn.onclick = () => { window.location.href = `account.html?user=${encodeURIComponent(nickname)}`; };
+  likerDialog.showModal();
+}
+
+function loadStateByNickname(nickname) {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(`${STORAGE_KEY}:${nickname}`) || '{}');
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
 function render() {
   renderMedia();
   renderCountries();
@@ -189,7 +240,7 @@ function renderMedia() {
       likersEl.innerHTML = likes.length
         ? likes.map((nickname) => {
           const avatar = getUserAvatarByNickname(nickname);
-          return `<span class="liker-chip" title="${escapeHtml(nickname)}"><img src="${escapeHtml(avatar)}" alt="${escapeHtml(nickname)}头像" /><small>${escapeHtml(nickname)}</small></span>`;
+          return `<span class="liker-chip" title="${escapeHtml(nickname)}"><img data-user="${escapeHtml(nickname)}" src="${escapeHtml(avatar)}" alt="${escapeHtml(nickname)}头像" /><small>${escapeHtml(nickname)}</small></span>`;
         }).join('')
         : '<p class="hint">还没有人点赞</p>';
     }

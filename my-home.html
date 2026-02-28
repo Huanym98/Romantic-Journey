@@ -41,6 +41,10 @@
         <h2>编辑个人资料</h2>
         <button id="panelClose" class="ghost" type="button">关闭</button>
       </div>
+      <div class="account-actions">
+        <button id="switchAccountBtn" type="button" class="ghost">切换账户</button>
+        <button id="logoutBtn" type="button" class="danger">注销登录</button>
+      </div>
       <form id="profileForm" class="grid">
         <label>生日 <input type="date" name="birthday" /></label>
         <label>MBTI
@@ -124,6 +128,24 @@
         </div>
       </article>
     </template>
+
+    <dialog id="likerDialog" class="person-dialog">
+      <div class="panel-head">
+        <h3>点赞用户信息</h3>
+        <button id="likerDialogClose" class="ghost" type="button">关闭</button>
+      </div>
+      <div class="person-hero">
+        <img id="likerAvatar" class="person-avatar" alt="用户头像" />
+        <div>
+          <p id="likerMeta" class="meta"></p>
+          <p id="likerRelation" class="relationship"></p>
+        </div>
+      </div>
+      <p id="likerSkills" class="hint"></p>
+      <div class="person-actions">
+        <button id="likerHomeBtn" class="secondary" type="button">查看主页</button>
+      </div>
+    </dialog>
 
     <script src="my-home.js"></script>
   </body>
