@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Romantic Journey · 管理后台</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="topbar-inner">
+        <div class="brand"><img src="assets/logo.svg" alt="浪漫之旅 Logo" /></div>
+        <nav class="nav-links">
+          <a href="index.html">首页</a>
+          <a href="my-home.html">我的主页</a>
+          <a href="search.html" class="nav-search-link"><span class="search-icon" aria-hidden="true"></span><span class="sr-only">查询</span></a>
+          <a href="admin.html" class="active">管理后台</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="layout" style="max-width: 1200px; margin: 1rem auto 2rem; padding: 0 1rem;">
+      <section class="card">
+        <h1>管理后台</h1>
+        <p class="hint">查看用户注册、行程发布与互动行为快照（基于本地存储）。</p>
+      </section>
+
+      <section class="card">
+        <h2>概览</h2>
+        <div id="overview" class="stats"></div>
+      </section>
+
+      <section class="card">
+        <div class="panel-head">
+          <h2>行为日志</h2>
+          <button id="clearEventsBtn" class="danger" type="button">清空日志</button>
+        </div>
+        <div id="eventList" class="msg-list"></div>
+      </section>
+
+      <section class="card">
+        <h2>用户列表</h2>
+        <div id="userList" class="msg-list"></div>
+      </section>
+
+      <section class="card">
+        <h2>最新行程</h2>
+        <div id="tripList" class="msg-list"></div>
+      </section>
+    </main>
+
+    <script src="admin.js" defer></script>
+  </body>
+</html>
