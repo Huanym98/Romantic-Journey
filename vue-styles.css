@@ -33,3 +33,7 @@ dialog{border:none;border-radius:12px;padding:12px;max-width:min(900px,95vw)}dia
 .message-preview-list{display:grid;gap:4px;margin:.35rem 0 .55rem}
 
 .search-user-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}.search-user-item{display:grid;grid-template-columns:34px 1fr;gap:10px;align-items:start}
+
+
+.lang-switch{border:1px solid var(--line);background:#fff;color:#111827;padding:8px 10px;border-radius:10px;min-width:96px}
+.admin-kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:10px}

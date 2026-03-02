@@ -34,7 +34,7 @@ const I18N = {
     globalSearch: '全站查询', searchPlaceholder: '搜索用户/行程/日记', account: '账户', trip: '行程', diary: '日记',
     accountHome: '的主页', recentTrips: '最近行程', profileInfo: '资料', badges: '勋章', taDiary: 'Ta 的日记', noDiary: '暂无日记', backSearch: '← 返回查询',
     messageCenter: '消息中心', markRead: '全部已读', chatMsg: '聊天消息', sysMsg: '系统消息', noChatMsg: '暂无聊天消息', noSysMsg: '暂无系统消息',
-    admin: '管理后台', users: '用户', trips: '行程', diaries: '日记', recentEvents: '最近事件'
+    admin: '管理后台', users: '用户', trips: '行程', diaries: '日记', recentEvents: '最近事件', kpiOverview: '活跃度速览', totalUsers: '总用户数', newUsers7d: '本周新增用户', newTrips7d: '本周新增行程', newDiaries7d: '本周新增日记', activeUsers7d: '近7天活跃用户'
   },
   en: {
     appName: 'Romantic Journey', navHome: 'Home', navMy: 'My Home', navMsg: 'Messages', navAdmin: 'Admin', logout: 'Logout', notLogin: 'Guest',
@@ -45,7 +45,7 @@ const I18N = {
     globalSearch: 'Global Search', searchPlaceholder: 'Search users/trips/diaries', account: 'Accounts', trip: 'Trips', diary: 'Diaries',
     accountHome: "'s Home", recentTrips: 'Recent Trips', profileInfo: 'Profile', badges: 'Badges', taDiary: 'Diaries', noDiary: 'No diaries', backSearch: '← Back to Search',
     messageCenter: 'Message Center', markRead: 'Mark all read', chatMsg: 'Chats', sysMsg: 'System', noChatMsg: 'No chat messages', noSysMsg: 'No system messages',
-    admin: 'Admin Panel', users: 'Users', trips: 'Trips', diaries: 'Diaries', recentEvents: 'Recent Events'
+    admin: 'Admin Panel', users: 'Users', trips: 'Trips', diaries: 'Diaries', recentEvents: 'Recent Events', kpiOverview: 'Activity Snapshot', totalUsers: 'Total Users', newUsers7d: 'New Users (7d)', newTrips7d: 'New Trips (7d)', newDiaries7d: 'New Diaries (7d)', activeUsers7d: 'Active Users (7d)'
   },
   ko: {
     appName: 'Romantic Journey', navHome: '홈', navMy: '내 홈', navMsg: '메시지', navAdmin: '관리', logout: '로그아웃', notLogin: '게스트',
@@ -56,7 +56,7 @@ const I18N = {
     globalSearch: '전체 검색', searchPlaceholder: '사용자/여행/다이어리 검색', account: '계정', trip: '여행', diary: '다이어리',
     accountHome: '님의 홈', recentTrips: '최근 여행', profileInfo: '프로필', badges: '배지', taDiary: '다이어리', noDiary: '다이어리 없음', backSearch: '← 검색으로',
     messageCenter: '메시지 센터', markRead: '모두 읽음', chatMsg: '채팅', sysMsg: '시스템', noChatMsg: '채팅 없음', noSysMsg: '시스템 메시지 없음',
-    admin: '관리 패널', users: '사용자', trips: '여행', diaries: '다이어리', recentEvents: '최근 이벤트'
+    admin: '관리 패널', users: '사용자', trips: '여행', diaries: '다이어리', recentEvents: '최근 이벤트', kpiOverview: '활동 개요', totalUsers: '총 사용자', newUsers7d: '최근 7일 신규 사용자', newTrips7d: '최근 7일 신규 여행', newDiaries7d: '최근 7일 신규 다이어리', activeUsers7d: '최근 7일 활성 사용자'
   },
   ja: {
     appName: 'Romantic Journey', navHome: 'ホーム', navMy: 'マイページ', navMsg: 'メッセージ', navAdmin: '管理', logout: 'ログアウト', notLogin: 'ゲスト',
@@ -67,7 +67,7 @@ const I18N = {
     globalSearch: 'サイト内検索', searchPlaceholder: 'ユーザー/旅程/日記を検索', account: 'アカウント', trip: '旅程', diary: '日記',
     accountHome: 'のホーム', recentTrips: '最近の旅程', profileInfo: 'プロフィール', badges: 'バッジ', taDiary: '日記', noDiary: '日記なし', backSearch: '← 検索へ戻る',
     messageCenter: 'メッセージセンター', markRead: 'すべて既読', chatMsg: 'チャット', sysMsg: 'システム', noChatMsg: 'チャットなし', noSysMsg: 'システム通知なし',
-    admin: '管理パネル', users: 'ユーザー', trips: '旅程', diaries: '日記', recentEvents: '最近のイベント'
+    admin: '管理パネル', users: 'ユーザー', trips: '旅程', diaries: '日記', recentEvents: '最近のイベント', kpiOverview: 'アクティブ指標', totalUsers: '総ユーザー数', newUsers7d: '今週の新規ユーザー', newTrips7d: '今週の新規旅程', newDiaries7d: '今週の新規日記', activeUsers7d: '直近7日のアクティブユーザー'
   },
   fr: {
     appName: 'Romantic Journey', navHome: 'Accueil', navMy: 'Mon espace', navMsg: 'Messages', navAdmin: 'Admin', logout: 'Déconnexion', notLogin: 'Invité',
@@ -78,7 +78,7 @@ const I18N = {
     globalSearch: 'Recherche globale', searchPlaceholder: 'Rechercher utilisateurs/voyages/journaux', account: 'Comptes', trip: 'Voyages', diary: 'Journaux',
     accountHome: ' - profil', recentTrips: 'Voyages récents', profileInfo: 'Profil', badges: 'Badges', taDiary: 'Journaux', noDiary: 'Aucun journal', backSearch: '← Retour recherche',
     messageCenter: 'Centre de messages', markRead: 'Tout marquer lu', chatMsg: 'Chats', sysMsg: 'Système', noChatMsg: 'Aucun chat', noSysMsg: 'Aucun message système',
-    admin: 'Console admin', users: 'Utilisateurs', trips: 'Voyages', diaries: 'Journaux', recentEvents: 'Événements récents'
+    admin: 'Console admin', users: 'Utilisateurs', trips: 'Voyages', diaries: 'Journaux', recentEvents: 'Événements récents', kpiOverview: "Aperçu d'activité", totalUsers: 'Utilisateurs totaux', newUsers7d: 'Nouveaux utilisateurs (7j)', newTrips7d: 'Nouveaux voyages (7j)', newDiaries7d: 'Nouveaux journaux (7j)', activeUsers7d: 'Utilisateurs actifs (7j)'
   }
 };
 
@@ -487,10 +487,20 @@ createApp({
 
     const adminStats = computed(() => {
       const events = read(KEYS.ADMIN, []);
+      const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+      const weeklyEvents = events.filter((e) => new Date(e.createdAt || 0).getTime() >= weekAgo);
+      const registerUsers = new Set(weeklyEvents.filter((e) => e.type === 'register').map((e) => e.payload?.user).filter(Boolean));
+      const newTrips7d = allTrips.value.filter((item) => new Date(item.createdAt || 0).getTime() >= weekAgo).length;
+      const newDiaries7d = allDiaries.value.filter((item) => new Date(item.createdAt || 0).getTime() >= weekAgo).length;
+      const activeUsers7d = new Set(weeklyEvents.flatMap((e) => [e.payload?.user, e.payload?.from, e.payload?.to]).filter(Boolean)).size;
       return {
         users: app.users.length,
         trips: allTrips.value.length,
         diaries: allDiaries.value.length,
+        newUsers7d: registerUsers.size,
+        newTrips7d,
+        newDiaries7d,
+        activeUsers7d,
         events: events.slice(0, 50)
       };
     });
@@ -613,7 +623,7 @@ createApp({
           <button class="avatar-btn" @click="toggleProfilePanel" :aria-expanded="String(app.showProfilePanel)">
             <img class="avatar sm" :src="app.state.profile?.avatar || '${defaultAvatar}'" alt="avatar" />
           </button>
-          <label class="chip"><select v-model="app.lang" @change="setLang"><option value="zh-CN">中文</option><option value="ko">한국어</option><option value="ja">日本語</option><option value="en">English</option><option value="fr">Français</option></select></label><span class="chip">{{app.current || t('notLogin')}}</span>
+          <select class="lang-switch" v-model="app.lang" @change="setLang" aria-label="language"><option value="zh-CN">中文</option><option value="ko">한국어</option><option value="ja">日本語</option><option value="en">English</option><option value="fr">Français</option></select><span class="chip">{{app.current || t('notLogin')}}</span>
           <button class="btn ghost" @click="logout">{{t('logout')}}</button>
         </div>
       </div>
@@ -756,11 +766,11 @@ createApp({
         <section class="card full">
           <h3>{{t('myTrips')}}</h3>
           <p class="hint" v-if="!(app.state.trips||[]).length">{{t('noTripYet')}}</p>
-          <article class="trip" v-for="t in (app.state.trips||[])" :key="t.id">
-            <div class="row" style="justify-content:space-between"><strong>{{t.destination}}</strong><span class="meta">{{t.departDate}} - {{t.returnDate}}</span></div>
-            <p class="hint">预算 ¥{{t.budget}} ｜ 标签 {{(t.tags||[]).join(' / ')}}</p>
-            <p>{{t.itinerary}}</p>
-            <div class="row" style="margin-top:6px"><button class="btn ghost" @click="openTrip(t.id)">{{t('viewDetail')}}</button></div>
+          <article class="trip" v-for="tripItem in (app.state.trips||[])" :key="tripItem.id">
+            <div class="row" style="justify-content:space-between"><strong>{{tripItem.destination}}</strong><span class="meta">{{tripItem.departDate}} - {{tripItem.returnDate}}</span></div>
+            <p class="hint">预算 ¥{{tripItem.budget}} ｜ 标签 {{(tripItem.tags||[]).join(' / ')}}</p>
+            <p>{{tripItem.itinerary}}</p>
+            <div class="row" style="margin-top:6px"><button class="btn ghost" @click="openTrip(tripItem.id)">{{t('viewDetail')}}</button></div>
           </article>
         </section>
         <section class="card">
@@ -901,6 +911,14 @@ createApp({
             <span class="chip">{{t('users')}} {{adminStats.users}}</span>
             <span class="chip">{{t('trips')}} {{adminStats.trips}}</span>
             <span class="chip">{{t('diaries')}} {{adminStats.diaries}}</span>
+          </div>
+          <h4>{{t('kpiOverview')}}</h4>
+          <div class="admin-kpi-grid">
+            <article class="trip"><strong>{{t('totalUsers')}}</strong><p class="meta">{{adminStats.users}}</p></article>
+            <article class="trip"><strong>{{t('newUsers7d')}}</strong><p class="meta">{{adminStats.newUsers7d}}</p></article>
+            <article class="trip"><strong>{{t('newTrips7d')}}</strong><p class="meta">{{adminStats.newTrips7d}}</p></article>
+            <article class="trip"><strong>{{t('newDiaries7d')}}</strong><p class="meta">{{adminStats.newDiaries7d}}</p></article>
+            <article class="trip"><strong>{{t('activeUsers7d')}}</strong><p class="meta">{{adminStats.activeUsers7d}}</p></article>
           </div>
           <h4>{{t('recentEvents')}}</h4>
           <article class="trip" v-for="e in adminStats.events" :key="e.id"><strong>{{e.type}}</strong><p class="meta">{{fmt(e.createdAt)}} · {{JSON.stringify(e.payload)}}</p></article>
