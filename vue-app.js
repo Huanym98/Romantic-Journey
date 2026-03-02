@@ -376,6 +376,15 @@ createApp({
       if ((app.state.trips || []).length >= 3) badges.push('🧭 行程达人');
       return badges.length ? badges : ['🌱 新人旅行者'];
     });
+    const followingCount = computed(() => {
+      if (!accountData.value?.user) return 0;
+      return (app.social.follows?.[accountData.value.user] || []).length;
+    });
+    const followerCount = computed(() => {
+      if (!accountData.value?.user) return 0;
+      const target = accountData.value.user;
+      return Object.values(app.social.follows || {}).filter((list) => Array.isArray(list) && list.includes(target)).length;
+    });
 
     onMounted(() => {
       window.addEventListener('hashchange', () => {
@@ -418,18 +427,20 @@ createApp({
       diaryData,
       currentChat,
       adminStats,
-      myBadges
+      myBadges,
+      followingCount,
+      followerCount
     };
   },
   template: `
   <div>
     <header class="top" v-if="app.route!=='register'">
       <div class="top-inner">
-        <div class="brand">Romantic Journey · Vue</div>
+        <div class="brand"><img src="assets/logo.svg" alt="logo" /><span>Romantic Journey · Vue</span></div>
         <nav class="nav">
           <button :class="{active:app.route==='home'}" @click="goto('home')">首页</button>
           <button :class="{active:app.route==='my'}" @click="goto('my')">我的主页</button>
-          <button :class="{active:app.route==='search'}" @click="goto('search')">查询</button>
+          <button :class="{active:app.route==='search'}" class="search-icon-btn" @click="goto('search')" aria-label="查询">⌕</button>
           <button :class="{active:app.route==='admin'}" @click="goto('admin')">后台</button>
         </nav>
         <div class="row" style="margin-left:auto">
@@ -498,26 +509,24 @@ createApp({
 
         <section class="card full">
           <div class="row"><h3 style="margin:0">行程广场</h3><input v-model="app.search" placeholder="搜索用户/目的地" style="max-width:280px" /></div>
-          <article class="trip" v-for="trip in filteredTrips" :key="trip.id">
+          <article class="trip trip-clickable" v-for="trip in filteredTrips" :key="trip.id" @click="openTrip(trip.id)">
             <div class="row" style="justify-content:space-between">
               <div class="row">
-                <img class="avatar" :src="trip.avatar || '${defaultAvatar}'" alt="avatar" />
+                <img class="avatar" :src="trip.avatar || '${defaultAvatar}'" alt="avatar" @click.stop="openAccount(trip.user)" />
                 <strong>{{trip.user}} · {{trip.destination}}</strong>
+                <button class="btn ghost" @click.stop="toggleRelation('follow', trip.user)">{{isFollowing(trip.user)?'已关注，点此取消':'关注'}}</button>
               </div>
               <span class="meta">{{fmt(trip.createdAt)}}</span>
             </div>
             <p class="hint">预算 ¥{{trip.budget}} ｜ 标签 {{(trip.tags||[]).join(' / ')}}</p>
             <p>{{trip.itinerary}}</p>
             <div class="row">
-              <button class="btn ghost" @click="openTrip(trip.id)">查看详情</button>
-              <button class="btn sec" @click="openAccount(trip.user)">看主页</button>
-              <button class="btn" @click="likeTrip(trip)">点赞 {{trip.likeCount||0}}</button>
-              <button class="btn ghost" @click="toggleRelation('follow', trip.user)">{{isFollowing(trip.user)?'取消关注':'关注'}}</button>
-              <button class="btn ghost" @click="openChat(trip.user)">聊天</button>
+              <button class="btn" @click.stop="likeTrip(trip)">👍 {{trip.likeCount||0}}</button>
+              <button class="btn ghost" @click.stop="openChat(trip.user)">聊天</button>
             </div>
             <div class="row" style="margin-top:6px">
-              <input v-model="app.commentDraft[trip.id]" placeholder="评论一下" style="flex:1"/>
-              <button class="btn ghost" @click="addComment(trip)">发送</button>
+              <input v-model="app.commentDraft[trip.id]" placeholder="评论一下" style="flex:1" @click.stop/>
+              <button class="btn ghost" @click.stop="addComment(trip)">发送</button>
             </div>
           </article>
         </section>
@@ -560,7 +569,7 @@ createApp({
             <button class="btn ghost" v-for="u in filteredUsers" :key="u.nickname" @click="openAccount(u.nickname)">{{u.nickname}}</button>
           </div>
           <h4>行程</h4>
-          <article class="trip" v-for="t in filteredTrips.slice(0,8)" :key="t.id"><strong>{{t.user}} · {{t.destination}}</strong> <button class="btn ghost" @click="openTrip(t.id)">详情</button></article>
+          <article class="trip trip-clickable" v-for="t in filteredTrips.slice(0,8)" :key="t.id" @click="openTrip(t.id)"><strong>{{t.user}} · {{t.destination}}</strong></article>
           <h4>日记</h4>
           <article class="trip" v-for="d in filteredDiaries.slice(0,8)" :key="d.id"><strong>{{d.caption}}</strong> <button class="btn ghost" @click="openDiary(d.id)">详情</button></article>
         </section>
@@ -573,6 +582,7 @@ createApp({
             <div>
               <h2 style="margin:.1rem 0">{{accountData.user}} 的主页</h2>
               <p class="hint">行程 {{(accountData.trips||[]).length}} 条 ｜ 日记 {{(accountData.mediaPosts||[]).length}} 条</p>
+              <p class="hint">已关注 {{followingCount}} ｜ 粉丝 {{followerCount}}</p>
             </div>
           </div>
           <div class="grid" style="margin-top:8px">
