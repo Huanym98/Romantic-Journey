@@ -22,7 +22,7 @@ const toDataUrl = (file) => new Promise((resolve) => { const r = new FileReader(
 
 const I18N = {
   'zh-CN': {
-    appName: 'Romantic Journey', navHome: '首页', navMy: '我的主页', navMsg: '消息', navAdmin: '后台',
+    appName: 'Romantic Journey', navHome: '首页', navMy: '我的主页', navMsg: '消息', navSearch: '查询', navAdmin: '后台',
     logout: '退出', notLogin: '未登录', profile: '个人资料', close: '关闭', saveProfile: '保存资料',
     loginTitle: '登录 / 注册（Vue版）', loginHint: '输入昵称 + 密码，自动判断登录或注册。', nickname: '昵称', password: '密码', continue: '继续',
     publishTrip: '发布行程', destination: '目的地', budgetYuan: '预算（元）', departDate: '出发日期', returnDate: '返程日期',
@@ -37,7 +37,7 @@ const I18N = {
     admin: '管理后台', users: '用户', trips: '行程', diaries: '日记', recentEvents: '最近事件', kpiOverview: '活跃度速览', totalUsers: '总用户数', newUsers7d: '本周新增用户', newTrips7d: '本周新增行程', newDiaries7d: '本周新增日记', activeUsers7d: '近7天活跃用户'
   },
   en: {
-    appName: 'Romantic Journey', navHome: 'Home', navMy: 'My Home', navMsg: 'Messages', navAdmin: 'Admin', logout: 'Logout', notLogin: 'Guest',
+    appName: 'Romantic Journey', navHome: 'Home', navMy: 'My Home', navMsg: 'Messages', navSearch: 'Search', navAdmin: 'Admin', logout: 'Logout', notLogin: 'Guest',
     profile: 'Profile', close: 'Close', saveProfile: 'Save Profile', loginTitle: 'Login / Register (Vue)', loginHint: 'Enter nickname + password to login/register automatically.', nickname: 'Nickname', password: 'Password', continue: 'Continue',
     publishTrip: 'Publish Trip', destination: 'Destination', budgetYuan: 'Budget (CNY)', departDate: 'Departure', returnDate: 'Return', tripTags: 'Tags (comma-separated)', spotsWant: 'Spots (comma-separated)', itinerary: 'Itinerary', publish: 'Publish',
     messagePreview: 'Message Preview', noMessage: 'No messages', viewAllMessages: 'View all messages', tripSquare: 'Trip Square', searchAll: 'Search user/destination',
@@ -48,7 +48,7 @@ const I18N = {
     admin: 'Admin Panel', users: 'Users', trips: 'Trips', diaries: 'Diaries', recentEvents: 'Recent Events', kpiOverview: 'Activity Snapshot', totalUsers: 'Total Users', newUsers7d: 'New Users (7d)', newTrips7d: 'New Trips (7d)', newDiaries7d: 'New Diaries (7d)', activeUsers7d: 'Active Users (7d)'
   },
   ko: {
-    appName: 'Romantic Journey', navHome: '홈', navMy: '내 홈', navMsg: '메시지', navAdmin: '관리', logout: '로그아웃', notLogin: '게스트',
+    appName: 'Romantic Journey', navHome: '홈', navMy: '내 홈', navMsg: '메시지', navSearch: '검색', navAdmin: '관리', logout: '로그아웃', notLogin: '게스트',
     profile: '프로필', close: '닫기', saveProfile: '저장', loginTitle: '로그인 / 회원가입 (Vue)', loginHint: '닉네임+비밀번호 입력 시 자동 로그인/가입', nickname: '닉네임', password: '비밀번호', continue: '계속',
     publishTrip: '여행 등록', destination: '목적지', budgetYuan: '예산', departDate: '출발일', returnDate: '복귀일', tripTags: '태그(쉼표)', spotsWant: '가고 싶은 곳(쉼표)', itinerary: '일정', publish: '등록',
     messagePreview: '메시지 미리보기', noMessage: '메시지 없음', viewAllMessages: '전체 메시지', tripSquare: '여행 광장', searchAll: '사용자/목적지 검색',
@@ -59,7 +59,7 @@ const I18N = {
     admin: '관리 패널', users: '사용자', trips: '여행', diaries: '다이어리', recentEvents: '최근 이벤트', kpiOverview: '활동 개요', totalUsers: '총 사용자', newUsers7d: '최근 7일 신규 사용자', newTrips7d: '최근 7일 신규 여행', newDiaries7d: '최근 7일 신규 다이어리', activeUsers7d: '최근 7일 활성 사용자'
   },
   ja: {
-    appName: 'Romantic Journey', navHome: 'ホーム', navMy: 'マイページ', navMsg: 'メッセージ', navAdmin: '管理', logout: 'ログアウト', notLogin: 'ゲスト',
+    appName: 'Romantic Journey', navHome: 'ホーム', navMy: 'マイページ', navMsg: 'メッセージ', navSearch: '検索', navAdmin: '管理', logout: 'ログアウト', notLogin: 'ゲスト',
     profile: 'プロフィール', close: '閉じる', saveProfile: '保存', loginTitle: 'ログイン / 登録（Vue）', loginHint: 'ニックネーム＋パスワードで自動ログイン/登録', nickname: 'ニックネーム', password: 'パスワード', continue: '続行',
     publishTrip: '旅程を投稿', destination: '目的地', budgetYuan: '予算', departDate: '出発日', returnDate: '帰着日', tripTags: 'タグ（カンマ）', spotsWant: '行きたい場所（カンマ）', itinerary: '詳細日程', publish: '投稿',
     messagePreview: 'メッセージプレビュー', noMessage: 'メッセージなし', viewAllMessages: 'すべて表示', tripSquare: '旅程広場', searchAll: 'ユーザー/目的地を検索',
@@ -70,7 +70,7 @@ const I18N = {
     admin: '管理パネル', users: 'ユーザー', trips: '旅程', diaries: '日記', recentEvents: '最近のイベント', kpiOverview: 'アクティブ指標', totalUsers: '総ユーザー数', newUsers7d: '今週の新規ユーザー', newTrips7d: '今週の新規旅程', newDiaries7d: '今週の新規日記', activeUsers7d: '直近7日のアクティブユーザー'
   },
   fr: {
-    appName: 'Romantic Journey', navHome: 'Accueil', navMy: 'Mon espace', navMsg: 'Messages', navAdmin: 'Admin', logout: 'Déconnexion', notLogin: 'Invité',
+    appName: 'Romantic Journey', navHome: 'Accueil', navMy: 'Mon espace', navMsg: 'Messages', navSearch: 'Recherche', navAdmin: 'Admin', logout: 'Déconnexion', notLogin: 'Invité',
     profile: 'Profil', close: 'Fermer', saveProfile: 'Enregistrer', loginTitle: 'Connexion / Inscription (Vue)', loginHint: 'Entrez pseudo + mot de passe pour connexion/inscription auto.', nickname: 'Pseudo', password: 'Mot de passe', continue: 'Continuer',
     publishTrip: 'Publier un voyage', destination: 'Destination', budgetYuan: 'Budget', departDate: 'Départ', returnDate: 'Retour', tripTags: 'Tags (virgule)', spotsWant: 'Lieux souhaités (virgule)', itinerary: 'Itinéraire', publish: 'Publier',
     messagePreview: 'Aperçu des messages', noMessage: 'Aucun message', viewAllMessages: 'Voir tous les messages', tripSquare: 'Place des voyages', searchAll: 'Rechercher utilisateur/destination',
@@ -752,11 +752,11 @@ createApp({
       <div class="top-inner">
         <div class="brand"><img src="assets/logo.svg" alt="logo" /><span>{{t('appName')}}</span></div>
         <nav class="nav">
-          <button :class="{active:app.route==='home'}" @click="goto('home')">{{t('navHome')}}</button>
-          <button :class="{active:app.route==='my'}" @click="goto('my')">{{t('navMy')}}</button>
-          <button :class="{active:app.route==='messages'}" @click="goto('messages')">{{t('navMsg')}}<span v-if="unreadTotal" class="msg-badge">{{unreadTotal}}</span></button>
-          <button :class="{active:app.route==='search'}" class="search-icon-btn" @click="goto('search')" aria-label="查询">⌕</button>
-          <button :class="{active:app.route==='admin'}" @click="goto('admin')">{{t('navAdmin')}}</button>
+          <button :class="{active:app.route==='home'}" @click="goto('home')">🏠 {{t('navHome')}}</button>
+          <button :class="{active:app.route==='my'}" @click="goto('my')">👤 {{t('navMy')}}</button>
+          <button :class="{active:app.route==='messages'}" @click="goto('messages')">💬 {{t('navMsg')}}<span v-if="unreadTotal" class="msg-badge">{{unreadTotal}}</span></button>
+          <button :class="{active:app.route==='search'}" @click="goto('search')" :aria-label="t('navSearch')">🔎 {{t('navSearch')}}</button>
+          <button :class="{active:app.route==='admin'}" @click="goto('admin')">🛠️ {{t('navAdmin')}}</button>
         </nav>
         <div class="row top-userbar" style="margin-left:auto">
           <select class="lang-switch" v-model="app.lang" @change="setLang" aria-label="language"><option value="zh-CN">中文</option><option value="ko">한국어</option><option value="ja">日本語</option><option value="en">English</option><option value="fr">Français</option></select>
