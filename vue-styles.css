@@ -38,9 +38,12 @@ dialog{border:none;border-radius:12px;padding:12px;max-width:min(900px,95vw)}dia
 .lang-switch{border:1px solid var(--line);background:#fff;color:#111827;padding:8px 10px;border-radius:10px;min-width:96px}
 .admin-kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:10px}
 
-.top-userbar{flex-wrap:nowrap;gap:8px}
+.top-userbar{flex-wrap:nowrap;gap:8px;justify-content:flex-end}
 .btn.liked{background:#f59e0b;color:#1f2937}
 .trip-likers{display:flex;align-items:center;gap:4px;margin:6px 0 2px}.trip-likers .avatar{width:22px;height:22px}
 .comment-sort-select{min-width:90px;padding:6px 8px}
 .btn.ghost.liked{background:#fef3c7;color:#92400e;border:1px solid #f59e0b}
 .trip-comments-block{margin-top:8px}
+.brand span{white-space:nowrap}
+.top-userbar .chip{max-width:10em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:inline-block}
+.top-userbar .btn.ghost{white-space:nowrap}

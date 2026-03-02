@@ -155,6 +155,7 @@ createApp({
       chatDraft: '',
       activeMsgTab: 'chats',
       tripCommentSort: 'newest',
+      diaryCommentSort: 'newest',
       lang: localStorage.getItem(KEYS.LANG) || 'zh-CN',
       stateVersion: 0,
       fromSearch: { account: false, trip: false, diary: false },
@@ -230,7 +231,7 @@ createApp({
       const rows = [];
       app.users.forEach((u) => {
         const s = stateByUser.value[u.nickname] || normalizeState({});
-        s.mediaPosts.forEach((d) => rows.push({ ...d, user: d.user || u.nickname }));
+        s.mediaPosts.forEach((d) => rows.push({ ...d, user: d.user || u.nickname, likes: Array.isArray(d.likes) ? d.likes : [], comments: Array.isArray(d.comments) ? d.comments.map((c) => ({...c, likes: Array.isArray(c.likes) ? c.likes : []})) : [] }));
       });
       return rows.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
     });
@@ -378,7 +379,8 @@ createApp({
           cover,
           batchId,
           createdAt: now(),
-          likes: []
+          likes: [],
+          comments: []
         });
       }
       app.state.mediaPosts = app.state.mediaPosts.slice(0, 50);
@@ -463,6 +465,69 @@ createApp({
     function sortedTripComments(trip) {
       const list = Array.isArray(trip?.comments) ? [...trip.comments] : [];
       if (app.tripCommentSort === 'hottest') {
+        return list.sort((a, b) => (b.likes?.length || 0) - (a.likes?.length || 0) || new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+      }
+      return list.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    }
+
+    function diaryLikers(diary) {
+      if (!diary || !Array.isArray(diary.likes)) return [];
+      return diary.likes.slice(0, 100);
+    }
+    function diaryLikeOverflow(diary) {
+      if (!diary || !Array.isArray(diary.likes)) return 0;
+      return Math.max(0, diary.likes.length - 100);
+    }
+    function isDiaryLikedByMe(diary) {
+      return Boolean(app.current && Array.isArray(diary?.likes) && diary.likes.includes(app.current));
+    }
+    function toggleDiaryLike(diary) {
+      if (!ensureLogin() || !diary) return;
+      const ownerState = getState(diary.user);
+      ownerState.mediaPosts = Array.isArray(ownerState.mediaPosts) ? ownerState.mediaPosts : [];
+      const target = ownerState.mediaPosts.find((d) => d.id === diary.id);
+      if (!target) return;
+      target.likes = Array.isArray(target.likes) ? target.likes : [];
+      const idx = target.likes.indexOf(app.current);
+      if (idx >= 0) target.likes.splice(idx, 1); else target.likes.push(app.current);
+      setState(diary.user, ownerState);
+      app.stateVersion += 1;
+      addEvent('like-diary', { from: app.current, to: diary.user, diaryId: diary.id });
+    }
+    function addDiaryComment(diary) {
+      if (!ensureLogin() || !diary) return;
+      const text = (app.commentDraft[diary.id] || '').trim();
+      if (!text) return;
+      const ownerState = getState(diary.user);
+      ownerState.mediaPosts = Array.isArray(ownerState.mediaPosts) ? ownerState.mediaPosts : [];
+      const target = ownerState.mediaPosts.find((d) => d.id === diary.id);
+      if (!target) return;
+      target.comments = Array.isArray(target.comments) ? target.comments : [];
+      target.comments.unshift({ id: uid(), user: app.current, avatar: app.state.profile.avatar || defaultAvatar, text, createdAt: now(), likes: [] });
+      setState(diary.user, ownerState);
+      app.stateVersion += 1;
+      app.commentDraft[diary.id] = '';
+      addEvent('comment-diary', { from: app.current, to: diary.user, diaryId: diary.id });
+    }
+    function toggleDiaryCommentLike(diary, comment) {
+      if (!ensureLogin() || !diary || !comment) return;
+      const ownerState = getState(diary.user);
+      ownerState.mediaPosts = Array.isArray(ownerState.mediaPosts) ? ownerState.mediaPosts : [];
+      const target = ownerState.mediaPosts.find((d) => d.id === diary.id);
+      if (!target) return;
+      target.comments = Array.isArray(target.comments) ? target.comments : [];
+      const targetComment = target.comments.find((c) => c.id === comment.id);
+      if (!targetComment) return;
+      targetComment.likes = Array.isArray(targetComment.likes) ? targetComment.likes : [];
+      const idx = targetComment.likes.indexOf(app.current);
+      if (idx >= 0) targetComment.likes.splice(idx, 1); else targetComment.likes.push(app.current);
+      setState(diary.user, ownerState);
+      app.stateVersion += 1;
+      addEvent('like-diary-comment', { from: app.current, to: diary.user, diaryId: diary.id, commentId: comment.id });
+    }
+    function sortedDiaryComments(diary) {
+      const list = Array.isArray(diary?.comments) ? [...diary.comments] : [];
+      if (app.diaryCommentSort === 'hottest') {
         return list.sort((a, b) => (b.likes?.length || 0) - (a.likes?.length || 0) || new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
       }
       return list.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
@@ -636,6 +701,13 @@ createApp({
       commentLikeOverflow,
       isCommentLikedByMe,
       sortedTripComments,
+      diaryLikers,
+      diaryLikeOverflow,
+      isDiaryLikedByMe,
+      toggleDiaryLike,
+      addDiaryComment,
+      toggleDiaryCommentLike,
+      sortedDiaryComments,
       openAccount,
       openTrip,
       openDiary,
@@ -966,6 +1038,44 @@ createApp({
           <p class="hint">{{diaryData.user}} · {{diaryData.location}} · {{diaryData.checkin}}</p>
           <section class="diary-grid">
             <img v-for="(img,i) in diaryData.images" :key="i" :src="img" @click="app.previewSrc=img; $refs.pv.showModal()" />
+          </section>
+          <div class="row" style="margin-top:8px">
+            <button class="btn" :class="{liked:isDiaryLikedByMe(diaryData)}" @click="toggleDiaryLike(diaryData)">👍 {{diaryData.likes?.length || 0}}</button>
+          </div>
+          <div class="trip-likers" v-if="diaryLikers(diaryData).length">
+            <img v-for="name in diaryLikers(diaryData)" :key="diaryData.id + '-' + name" class="avatar sm" :src="getUserAvatar(name)" :title="name" :alt="name" />
+            <span class="hint" v-if="diaryLikeOverflow(diaryData)">+{{diaryLikeOverflow(diaryData)}}</span>
+          </div>
+          <section class="trip-comments-block">
+            <div class="row" style="justify-content:space-between;align-items:center">
+              <h4 style="margin:.4rem 0">评论</h4>
+              <select v-model="app.diaryCommentSort" class="comment-sort-select">
+                <option value="newest">最新</option>
+                <option value="hottest">最热</option>
+              </select>
+            </div>
+            <div class="row" style="margin:.35rem 0 .6rem">
+              <input v-model="app.commentDraft[diaryData.id]" placeholder="写评论，按发送发布" style="flex:1" />
+              <button class="btn" @click="addDiaryComment(diaryData)">发送</button>
+            </div>
+            <p class="hint" v-if="!sortedDiaryComments(diaryData).length">暂无评论</p>
+            <article class="trip" v-for="comment in sortedDiaryComments(diaryData)" :key="comment.id">
+              <div class="row" style="justify-content:space-between">
+                <div class="row">
+                  <img class="avatar sm" :src="getUserAvatar(comment.user)" :alt="comment.user" />
+                  <strong>{{comment.user}}</strong>
+                </div>
+                <small class="meta">{{fmt(comment.createdAt)}}</small>
+              </div>
+              <p style="margin:.35rem 0">{{comment.text}}</p>
+              <div class="row">
+                <button class="btn ghost" :class="{liked:isCommentLikedByMe(comment)}" @click="toggleDiaryCommentLike(diaryData, comment)">👍 {{comment.likes?.length || 0}}</button>
+              </div>
+              <div class="trip-likers" v-if="commentLikers(comment).length">
+                <img v-for="name in commentLikers(comment)" :key="comment.id + '-' + name" class="avatar sm" :src="getUserAvatar(name)" :title="name" :alt="name" />
+                <span class="hint" v-if="commentLikeOverflow(comment)">+{{commentLikeOverflow(comment)}}</span>
+              </div>
+            </article>
           </section>
           <button v-if="app.fromSearch.diary" class="btn ghost" @click="goto('search')" style="margin-top:8px">{{t('backSearch')}}</button>
         </section>
