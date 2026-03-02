@@ -669,16 +669,16 @@ createApp({
         <section class="card">
           <h3>{{t('publishTrip')}}</h3>
           <form class="grid" @submit.prevent="postTrip">
-            <label>{{t('destination')}
+            <label>{{t('destination')}}
               <input v-model="app.tripForm.destination" placeholder="例如：首尔" required />
             </label>
-            <label>{{t('budgetYuan')}
+            <label>{{t('budgetYuan')}}
               <input v-model="app.tripForm.budget" type="number" placeholder="例如：5000" required />
             </label>
-            <label>{{t('departDate')}
+            <label>{{t('departDate')}}
               <input v-model="app.tripForm.departDate" type="date" required />
             </label>
-            <label>{{t('returnDate')}
+            <label>{{t('returnDate')}}
               <input v-model="app.tripForm.returnDate" type="date" required />
             </label>
             <label class="full">{{t('tripTags')}}
