@@ -453,6 +453,10 @@ createApp({
     });
     const unreadTotal = computed(() => unreadChatCount.value + unreadSystemCount.value);
     const myBadges = computed(() => calcBadges(app.state));
+    function userBadges(user) {
+      const s = stateByUser.value[user] || getState(user);
+      return calcBadges(s);
+    }
     const followingCount = computed(() => {
       if (!accountData.value?.user) return 0;
       return (app.social.follows?.[accountData.value.user] || []).length;
@@ -496,6 +500,7 @@ createApp({
       openDiary,
       openChat,
       sendChat,
+      stateByUser,
       filteredUsers,
       filteredTrips,
       filteredDiaries,
@@ -508,6 +513,7 @@ createApp({
       currentChat,
       adminStats,
       myBadges,
+      userBadges,
       followingCount,
       followerCount,
       chatPreviews,
@@ -674,6 +680,16 @@ createApp({
             <button class="btn full">发布日记</button>
           </form>
         </section>
+        <section class="card full">
+          <h3>我的行程</h3>
+          <p class="hint" v-if="!(app.state.trips||[]).length">还没有发布行程</p>
+          <article class="trip" v-for="t in (app.state.trips||[])" :key="t.id">
+            <div class="row" style="justify-content:space-between"><strong>{{t.destination}}</strong><span class="meta">{{t.departDate}} - {{t.returnDate}}</span></div>
+            <p class="hint">预算 ¥{{t.budget}} ｜ 标签 {{(t.tags||[]).join(' / ')}}</p>
+            <p>{{t.itinerary}}</p>
+            <div class="row" style="margin-top:6px"><button class="btn ghost" @click="openTrip(t.id)">查看详情</button></div>
+          </article>
+        </section>
         <section class="card">
           <h3>我的日记</h3>
           <article class="trip" v-for="d in app.state.mediaPosts" :key="d.id">
@@ -694,8 +710,15 @@ createApp({
           <input v-model="app.search" placeholder="搜索用户/行程/日记" />
           <template v-if="hasSearchKeyword">
             <h4>账户</h4>
-            <div class="row">
-              <button class="btn ghost" v-for="u in filteredUsers" :key="u.nickname" @click="openAccount(u.nickname, 'search')">{{u.nickname}}</button>
+            <div class="search-user-list">
+              <article class="trip trip-clickable search-user-item" v-for="u in filteredUsers" :key="u.nickname" @click="openAccount(u.nickname, 'search')">
+                <img class="avatar" :src="getUserAvatar(u.nickname)" :alt="u.nickname" />
+                <div>
+                  <strong>{{u.nickname}}</strong>
+                  <p class="hint">勋章：{{userBadges(u.nickname).join(' ｜ ')}}</p>
+                  <p class="hint">行程 {{(stateByUser[u.nickname]?.trips||[]).length}} 条 ｜ 日记 {{(stateByUser[u.nickname]?.mediaPosts||[]).length}} 条</p>
+                </div>
+              </article>
             </div>
             <h4>行程</h4>
             <article class="trip trip-clickable" v-for="t in filteredTrips.slice(0,8)" :key="t.id" @click="openTrip(t.id, 'search')"><strong>{{t.user}} · {{t.destination}}</strong></article>
@@ -725,9 +748,17 @@ createApp({
               <p class="hint">社交 {{accountData.profile?.social||'-'}}</p>
               <p class="hint">简介 {{accountData.profile?.bio||'-'}}</p>
               <p class="hint">技能 {{Array.isArray(accountData.profile?.skills)?accountData.profile.skills.join('、'):accountData.profile?.skills}}</p>
+              <p class="hint">勋章 {{userBadges(accountData.user).join(' ｜ ')}}</p>
             </div>
-            <div class="card"><h4>最近行程</h4><div class="trip" v-for="t in (accountData.trips||[]).slice(0,4)" :key="t.id">{{t.destination}} · {{t.departDate}}-{{t.returnDate}}</div></div>
+            <div class="card"><h4>最近行程</h4><div class="trip" v-for="t in (accountData.trips||[])" :key="t.id" @click="openTrip(t.id)" style="cursor:pointer">{{t.destination}} · {{t.departDate}}-{{t.returnDate}}</div></div>
           </div>
+          <section class="card" style="margin-top:10px">
+            <h4>Ta 的日记</h4>
+            <p class="hint" v-if="!(accountData.mediaPosts||[]).length">暂无日记</p>
+            <article class="trip trip-clickable" v-for="d in (accountData.mediaPosts||[])" :key="d.id" @click="openDiary(d.id)">
+              <div class="row" style="justify-content:space-between"><strong>{{d.caption}}</strong><span class="meta">{{d.location}} · {{fmt(d.createdAt)}}</span></div>
+            </article>
+          </section>
           <button v-if="app.fromSearch.account" class="btn ghost" @click="goto('search')">← 返回查询</button>
         </section>
       </template>

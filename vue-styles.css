@@ -31,3 +31,5 @@ dialog{border:none;border-radius:12px;padding:12px;max-width:min(900px,95vw)}dia
 .my-badge-side{align-self:flex-start}
 
 .message-preview-list{display:grid;gap:4px;margin:.35rem 0 .55rem}
+
+.search-user-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}.search-user-item{display:grid;grid-template-columns:34px 1fr;gap:10px;align-items:start}
