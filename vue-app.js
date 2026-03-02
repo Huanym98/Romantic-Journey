@@ -7,6 +7,7 @@ const KEYS = {
   ADMIN: 'romanticJourneyAdminEvents',
   NOTICE: 'romanticJourneyNoticeState',
   SUPPORT: 'romanticJourneySupportCount',
+  LANG: 'romanticJourneyLang',
   STATE_PREFIX: 'romanticJourneyState:'
 };
 const defaultAvatar = 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=160&q=80';
@@ -18,6 +19,68 @@ const now = () => new Date().toISOString();
 const fmt = (t) => new Date(t || Date.now()).toLocaleString('zh-CN', { hour12: false });
 const list = (s) => String(s || '').split(',').map((x) => x.trim()).filter(Boolean);
 const toDataUrl = (file) => new Promise((resolve) => { const r = new FileReader(); r.onload = () => resolve(String(r.result || '')); r.readAsDataURL(file); });
+
+const I18N = {
+  'zh-CN': {
+    appName: 'Romantic Journey', navHome: '首页', navMy: '我的主页', navMsg: '消息', navAdmin: '后台',
+    logout: '退出', notLogin: '未登录', profile: '个人资料', close: '关闭', saveProfile: '保存资料',
+    loginTitle: '登录 / 注册（Vue版）', loginHint: '输入昵称 + 密码，自动判断登录或注册。', nickname: '昵称', password: '密码', continue: '继续',
+    publishTrip: '发布行程', destination: '目的地', budgetYuan: '预算（元）', departDate: '出发日期', returnDate: '返程日期',
+    tripTags: '行程标签（逗号分隔）', spotsWant: '想去景点（逗号分隔）', itinerary: '详细行程', publish: '发布',
+    messagePreview: '消息预览', noMessage: '暂无消息', viewAllMessages: '查看全部消息',
+    tripSquare: '行程广场', searchAll: '搜索用户/目的地',
+    myTrips: '我的行程', noTripYet: '还没有发布行程', viewDetail: '查看详情',
+    myDiaries: '我的日记', myBadges: '我的勋章',
+    globalSearch: '全站查询', searchPlaceholder: '搜索用户/行程/日记', account: '账户', trip: '行程', diary: '日记',
+    accountHome: '的主页', recentTrips: '最近行程', profileInfo: '资料', badges: '勋章', taDiary: 'Ta 的日记', noDiary: '暂无日记', backSearch: '← 返回查询',
+    messageCenter: '消息中心', markRead: '全部已读', chatMsg: '聊天消息', sysMsg: '系统消息', noChatMsg: '暂无聊天消息', noSysMsg: '暂无系统消息',
+    admin: '管理后台', users: '用户', trips: '行程', diaries: '日记', recentEvents: '最近事件'
+  },
+  en: {
+    appName: 'Romantic Journey', navHome: 'Home', navMy: 'My Home', navMsg: 'Messages', navAdmin: 'Admin', logout: 'Logout', notLogin: 'Guest',
+    profile: 'Profile', close: 'Close', saveProfile: 'Save Profile', loginTitle: 'Login / Register (Vue)', loginHint: 'Enter nickname + password to login/register automatically.', nickname: 'Nickname', password: 'Password', continue: 'Continue',
+    publishTrip: 'Publish Trip', destination: 'Destination', budgetYuan: 'Budget (CNY)', departDate: 'Departure', returnDate: 'Return', tripTags: 'Tags (comma-separated)', spotsWant: 'Spots (comma-separated)', itinerary: 'Itinerary', publish: 'Publish',
+    messagePreview: 'Message Preview', noMessage: 'No messages', viewAllMessages: 'View all messages', tripSquare: 'Trip Square', searchAll: 'Search user/destination',
+    myTrips: 'My Trips', noTripYet: 'No trips yet', viewDetail: 'View', myDiaries: 'My Diaries', myBadges: 'My Badges',
+    globalSearch: 'Global Search', searchPlaceholder: 'Search users/trips/diaries', account: 'Accounts', trip: 'Trips', diary: 'Diaries',
+    accountHome: "'s Home", recentTrips: 'Recent Trips', profileInfo: 'Profile', badges: 'Badges', taDiary: 'Diaries', noDiary: 'No diaries', backSearch: '← Back to Search',
+    messageCenter: 'Message Center', markRead: 'Mark all read', chatMsg: 'Chats', sysMsg: 'System', noChatMsg: 'No chat messages', noSysMsg: 'No system messages',
+    admin: 'Admin Panel', users: 'Users', trips: 'Trips', diaries: 'Diaries', recentEvents: 'Recent Events'
+  },
+  ko: {
+    appName: 'Romantic Journey', navHome: '홈', navMy: '내 홈', navMsg: '메시지', navAdmin: '관리', logout: '로그아웃', notLogin: '게스트',
+    profile: '프로필', close: '닫기', saveProfile: '저장', loginTitle: '로그인 / 회원가입 (Vue)', loginHint: '닉네임+비밀번호 입력 시 자동 로그인/가입', nickname: '닉네임', password: '비밀번호', continue: '계속',
+    publishTrip: '여행 등록', destination: '목적지', budgetYuan: '예산', departDate: '출발일', returnDate: '복귀일', tripTags: '태그(쉼표)', spotsWant: '가고 싶은 곳(쉼표)', itinerary: '일정', publish: '등록',
+    messagePreview: '메시지 미리보기', noMessage: '메시지 없음', viewAllMessages: '전체 메시지', tripSquare: '여행 광장', searchAll: '사용자/목적지 검색',
+    myTrips: '내 여행', noTripYet: '등록한 여행이 없습니다', viewDetail: '상세보기', myDiaries: '내 다이어리', myBadges: '내 배지',
+    globalSearch: '전체 검색', searchPlaceholder: '사용자/여행/다이어리 검색', account: '계정', trip: '여행', diary: '다이어리',
+    accountHome: '님의 홈', recentTrips: '최근 여행', profileInfo: '프로필', badges: '배지', taDiary: '다이어리', noDiary: '다이어리 없음', backSearch: '← 검색으로',
+    messageCenter: '메시지 센터', markRead: '모두 읽음', chatMsg: '채팅', sysMsg: '시스템', noChatMsg: '채팅 없음', noSysMsg: '시스템 메시지 없음',
+    admin: '관리 패널', users: '사용자', trips: '여행', diaries: '다이어리', recentEvents: '최근 이벤트'
+  },
+  ja: {
+    appName: 'Romantic Journey', navHome: 'ホーム', navMy: 'マイページ', navMsg: 'メッセージ', navAdmin: '管理', logout: 'ログアウト', notLogin: 'ゲスト',
+    profile: 'プロフィール', close: '閉じる', saveProfile: '保存', loginTitle: 'ログイン / 登録（Vue）', loginHint: 'ニックネーム＋パスワードで自動ログイン/登録', nickname: 'ニックネーム', password: 'パスワード', continue: '続行',
+    publishTrip: '旅程を投稿', destination: '目的地', budgetYuan: '予算', departDate: '出発日', returnDate: '帰着日', tripTags: 'タグ（カンマ）', spotsWant: '行きたい場所（カンマ）', itinerary: '詳細日程', publish: '投稿',
+    messagePreview: 'メッセージプレビュー', noMessage: 'メッセージなし', viewAllMessages: 'すべて表示', tripSquare: '旅程広場', searchAll: 'ユーザー/目的地を検索',
+    myTrips: '自分の旅程', noTripYet: 'まだ旅程がありません', viewDetail: '詳細を見る', myDiaries: '自分の日記', myBadges: '自分のバッジ',
+    globalSearch: 'サイト内検索', searchPlaceholder: 'ユーザー/旅程/日記を検索', account: 'アカウント', trip: '旅程', diary: '日記',
+    accountHome: 'のホーム', recentTrips: '最近の旅程', profileInfo: 'プロフィール', badges: 'バッジ', taDiary: '日記', noDiary: '日記なし', backSearch: '← 検索へ戻る',
+    messageCenter: 'メッセージセンター', markRead: 'すべて既読', chatMsg: 'チャット', sysMsg: 'システム', noChatMsg: 'チャットなし', noSysMsg: 'システム通知なし',
+    admin: '管理パネル', users: 'ユーザー', trips: '旅程', diaries: '日記', recentEvents: '最近のイベント'
+  },
+  fr: {
+    appName: 'Romantic Journey', navHome: 'Accueil', navMy: 'Mon espace', navMsg: 'Messages', navAdmin: 'Admin', logout: 'Déconnexion', notLogin: 'Invité',
+    profile: 'Profil', close: 'Fermer', saveProfile: 'Enregistrer', loginTitle: 'Connexion / Inscription (Vue)', loginHint: 'Entrez pseudo + mot de passe pour connexion/inscription auto.', nickname: 'Pseudo', password: 'Mot de passe', continue: 'Continuer',
+    publishTrip: 'Publier un voyage', destination: 'Destination', budgetYuan: 'Budget', departDate: 'Départ', returnDate: 'Retour', tripTags: 'Tags (virgule)', spotsWant: 'Lieux souhaités (virgule)', itinerary: 'Itinéraire', publish: 'Publier',
+    messagePreview: 'Aperçu des messages', noMessage: 'Aucun message', viewAllMessages: 'Voir tous les messages', tripSquare: 'Place des voyages', searchAll: 'Rechercher utilisateur/destination',
+    myTrips: 'Mes voyages', noTripYet: 'Aucun voyage publié', viewDetail: 'Voir détail', myDiaries: 'Mes journaux', myBadges: 'Mes badges',
+    globalSearch: 'Recherche globale', searchPlaceholder: 'Rechercher utilisateurs/voyages/journaux', account: 'Comptes', trip: 'Voyages', diary: 'Journaux',
+    accountHome: ' - profil', recentTrips: 'Voyages récents', profileInfo: 'Profil', badges: 'Badges', taDiary: 'Journaux', noDiary: 'Aucun journal', backSearch: '← Retour recherche',
+    messageCenter: 'Centre de messages', markRead: 'Tout marquer lu', chatMsg: 'Chats', sysMsg: 'Système', noChatMsg: 'Aucun chat', noSysMsg: 'Aucun message système',
+    admin: 'Console admin', users: 'Utilisateurs', trips: 'Voyages', diaries: 'Journaux', recentEvents: 'Événements récents'
+  }
+};
 
 function getUsers() {
   const users = read(KEYS.USERS, []);
@@ -480,6 +543,8 @@ createApp({
     return {
       app,
       fmt,
+      t,
+      setLang,
       goto,
       loginOrRegister,
       logout,
@@ -528,27 +593,27 @@ createApp({
   <div>
     <header class="top" v-if="app.route!=='register'">
       <div class="top-inner">
-        <div class="brand"><img src="assets/logo.svg" alt="logo" /><span>Romantic Journey · Vue</span></div>
+        <div class="brand"><img src="assets/logo.svg" alt="logo" /><span>{{t('appName')}}</span></div>
         <nav class="nav">
-          <button :class="{active:app.route==='home'}" @click="goto('home')">首页</button>
-          <button :class="{active:app.route==='my'}" @click="goto('my')">我的主页</button>
-          <button :class="{active:app.route==='messages'}" @click="goto('messages')">消息<span v-if="unreadTotal" class="msg-badge">{{unreadTotal}}</span></button>
+          <button :class="{active:app.route==='home'}" @click="goto('home')">{{t('navHome')}}</button>
+          <button :class="{active:app.route==='my'}" @click="goto('my')">{{t('navMy')}}</button>
+          <button :class="{active:app.route==='messages'}" @click="goto('messages')">{{t('navMsg')}}<span v-if="unreadTotal" class="msg-badge">{{unreadTotal}}</span></button>
           <button :class="{active:app.route==='search'}" class="search-icon-btn" @click="goto('search')" aria-label="查询">⌕</button>
-          <button :class="{active:app.route==='admin'}" @click="goto('admin')">后台</button>
+          <button :class="{active:app.route==='admin'}" @click="goto('admin')">{{t('navAdmin')}}</button>
         </nav>
         <div class="row" style="margin-left:auto">
           <button class="avatar-btn" @click="toggleProfilePanel" :aria-expanded="String(app.showProfilePanel)">
             <img class="avatar sm" :src="app.state.profile?.avatar || '${defaultAvatar}'" alt="avatar" />
           </button>
-          <span class="chip">{{app.current || '未登录'}}</span>
-          <button class="btn ghost" @click="logout">退出</button>
+          <label class="chip"><select v-model="app.lang" @change="setLang"><option value="zh-CN">中文</option><option value="ko">한국어</option><option value="ja">日本語</option><option value="en">English</option><option value="fr">Français</option></select></label><span class="chip">{{app.current || t('notLogin')}}</span>
+          <button class="btn ghost" @click="logout">{{t('logout')}}</button>
         </div>
       </div>
     </header>
 
     <aside v-if="app.route!=='register' && app.showProfilePanel" class="profile-panel">
       <div class="profile-panel-card">
-        <div class="row" style="justify-content:space-between"><h3 style="margin:0">个人资料</h3><button class="btn ghost" @click="closeProfilePanel">关闭</button></div>
+        <div class="row" style="justify-content:space-between"><h3 style="margin:0">{{t('profile')}}</h3><button class="btn ghost" @click="closeProfilePanel">{{t('close')}}</button></div>
         <form class="grid" @submit.prevent="saveProfile" style="margin-top:8px">
           <label class="full">头像 <input type="file" accept="image/*" @change="onAvatarChange" /></label>
           <label class="full">个人简介 / 介绍
@@ -576,62 +641,62 @@ createApp({
           <label>社交偏好
             <select v-model="app.profileForm.social"><option>外向</option><option>适中</option><option>安静</option></select>
           </label>
-          <button class="btn full">保存资料</button>
+          <button class="btn full">{{t('saveProfile')}}</button>
         </form>
       </div>
     </aside>
 
     <section v-if="app.route==='register'" class="auth card">
-      <h2>登录 / 注册（Vue版）</h2>
-      <p class="hint">输入昵称 + 密码，自动判断登录或注册。</p>
+      <h2>{{t('loginTitle')}}</h2>
+      <p class="hint">{{t('loginHint')}}</p>
       <div class="grid">
-        <input v-model="app.auth.nickname" placeholder="昵称" />
-        <input v-model="app.auth.password" type="password" placeholder="密码" />
-        <button class="btn full" @click="loginOrRegister">继续</button>
+        <input v-model="app.auth.nickname" :placeholder="t('nickname')" />
+        <input v-model="app.auth.password" type="password" :placeholder="t('password')" />
+        <button class="btn full" @click="loginOrRegister">{{t('continue')}}</button>
       </div>
     </section>
 
     <main v-else class="wrap">
       <template v-if="app.route==='home'">
         <section class="card">
-          <h3>发布行程</h3>
+          <h3>{{t('publishTrip')}}</h3>
           <form class="grid" @submit.prevent="postTrip">
-            <label>目的地
+            <label>{{t('destination')}
               <input v-model="app.tripForm.destination" placeholder="例如：首尔" required />
             </label>
-            <label>预算（元）
+            <label>{{t('budgetYuan')}
               <input v-model="app.tripForm.budget" type="number" placeholder="例如：5000" required />
             </label>
-            <label>出发日期
+            <label>{{t('departDate')}
               <input v-model="app.tripForm.departDate" type="date" required />
             </label>
-            <label>返程日期
+            <label>{{t('returnDate')}
               <input v-model="app.tripForm.returnDate" type="date" required />
             </label>
-            <label class="full">行程标签（逗号分隔）
+            <label class="full">{{t('tripTags')}}
               <input v-model="app.tripForm.tags" placeholder="如：citywalk,美食,摄影" required />
             </label>
-            <label class="full">想去景点（逗号分隔）
+            <label class="full">{{t('spotsWant')}}
               <input v-model="app.tripForm.spots" placeholder="如：首尔塔,明洞" required />
             </label>
-            <label class="full">详细行程
+            <label class="full">{{t('itinerary')}}
               <textarea v-model="app.tripForm.itinerary" placeholder="例如：D1 上午明洞，D2 弘大 citywalk" required></textarea>
             </label>
-            <button class="btn full">发布行程</button>
+            <button class="btn full">{{t('publish')}}</button>
           </form>
         </section>
         <aside class="card">
-          <h3>消息预览</h3>
-          <p class="hint" v-if="!chatPreviews.length && !systemMessages.length">暂无消息</p>
+          <h3>{{t('messagePreview')}}</h3>
+          <p class="hint" v-if="!chatPreviews.length && !systemMessages.length">{{t('noMessage')}}</p>
           <div class="message-preview-list" v-if="chatPreviews.length || systemMessages.length">
             <p class="hint" v-for="c in chatPreviews.slice(0,3)" :key="c.id">💬 {{c.peer}}：{{c.last?.text || '暂无内容'}}<span v-if="c.unread">（未读{{c.unread}}）</span></p>
             <p class="hint" v-for="m in systemMessages.slice(0,3)" :key="m.id">🔔 {{m.text}}</p>
           </div>
-          <button class="btn ghost" @click="goto('messages')">查看全部消息</button>
+          <button class="btn ghost" @click="goto('messages')">{{t('viewAllMessages')}}</button>
         </aside>
 
         <section class="card full">
-          <div class="row"><h3 style="margin:0">行程广场</h3><input v-model="app.search" placeholder="搜索用户/目的地" style="max-width:280px" /></div>
+          <div class="row"><h3 style="margin:0">{{t('tripSquare')}}</h3><input v-model="app.search" :placeholder="t('searchAll')" style="max-width:280px" /></div>
           <article class="trip trip-clickable" v-for="trip in homeTrips" :key="trip.id" @click="openTrip(trip.id)">
             <div class="row" style="justify-content:space-between">
               <div class="row">
@@ -681,35 +746,35 @@ createApp({
           </form>
         </section>
         <section class="card full">
-          <h3>我的行程</h3>
-          <p class="hint" v-if="!(app.state.trips||[]).length">还没有发布行程</p>
+          <h3>{{t('myTrips')}}</h3>
+          <p class="hint" v-if="!(app.state.trips||[]).length">{{t('noTripYet')}}</p>
           <article class="trip" v-for="t in (app.state.trips||[])" :key="t.id">
             <div class="row" style="justify-content:space-between"><strong>{{t.destination}}</strong><span class="meta">{{t.departDate}} - {{t.returnDate}}</span></div>
             <p class="hint">预算 ¥{{t.budget}} ｜ 标签 {{(t.tags||[]).join(' / ')}}</p>
             <p>{{t.itinerary}}</p>
-            <div class="row" style="margin-top:6px"><button class="btn ghost" @click="openTrip(t.id)">查看详情</button></div>
+            <div class="row" style="margin-top:6px"><button class="btn ghost" @click="openTrip(t.id)">{{t('viewDetail')}}</button></div>
           </article>
         </section>
         <section class="card">
-          <h3>我的日记</h3>
+          <h3>{{t('myDiaries')}}</h3>
           <article class="trip" v-for="d in app.state.mediaPosts" :key="d.id">
             <div class="row" style="justify-content:space-between"><strong>{{d.caption}}</strong><span class="meta">{{d.location}} · {{fmt(d.createdAt)}}</span></div>
             <img :src="d.cover" style="width:100%;max-height:200px;object-fit:cover;border-radius:8px;border:1px solid var(--line);margin-top:6px" />
-            <div class="row" style="margin-top:6px"><button class="btn ghost" @click="openDiary(d.id)">查看详情</button></div>
+            <div class="row" style="margin-top:6px"><button class="btn ghost" @click="openDiary(d.id)">{{t('viewDetail')}}</button></div>
           </article>
         </section>
         <section class="card my-badge-side">
-          <h3>我的勋章</h3>
+          <h3>{{t('myBadges')}}</h3>
           <div class="row"><span class="chip" v-for="(badge, i) in myBadges" :key="i">{{badge}}</span></div>
         </section>
       </template>
 
       <template v-else-if="app.route==='search'">
         <section class="card full">
-          <h3>全站查询</h3>
-          <input v-model="app.search" placeholder="搜索用户/行程/日记" />
+          <h3>{{t('globalSearch')}}</h3>
+          <input v-model="app.search" :placeholder="t('searchPlaceholder')" />
           <template v-if="hasSearchKeyword">
-            <h4>账户</h4>
+            <h4>{{t('account')}}</h4>
             <div class="search-user-list">
               <article class="trip trip-clickable search-user-item" v-for="u in filteredUsers" :key="u.nickname" @click="openAccount(u.nickname, 'search')">
                 <img class="avatar" :src="getUserAvatar(u.nickname)" :alt="u.nickname" />
@@ -720,9 +785,9 @@ createApp({
                 </div>
               </article>
             </div>
-            <h4>行程</h4>
+            <h4>{{t('trip')}}</h4>
             <article class="trip trip-clickable" v-for="t in filteredTrips.slice(0,8)" :key="t.id" @click="openTrip(t.id, 'search')"><strong>{{t.user}} · {{t.destination}}</strong></article>
-            <h4>日记</h4>
+            <h4>{{t('diary')}}</h4>
             <article class="trip trip-clickable" v-for="d in filteredDiaries.slice(0,8)" :key="d.id" @click="openDiary(d.id, 'search')"><strong>{{d.caption}}</strong></article>
           </template>
           <p v-else class="hint">请输入关键词后再查询结果。</p>
@@ -734,14 +799,14 @@ createApp({
           <div class="row">
             <img class="avatar lg" :src="accountData.profile?.avatar || '${defaultAvatar}'" alt="avatar" />
             <div>
-              <h2 style="margin:.1rem 0">{{accountData.user}} 的主页</h2>
+              <h2 style="margin:.1rem 0">{{accountData.user}}{{t('accountHome')}}</h2>
               <p class="hint">行程 {{(accountData.trips||[]).length}} 条 ｜ 日记 {{(accountData.mediaPosts||[]).length}} 条</p>
               <p class="hint">已关注 {{followingCount}} ｜ 粉丝 {{followerCount}}</p>
             </div>
           </div>
           <div class="grid" style="margin-top:8px">
             <div class="card">
-              <h4>资料</h4>
+              <h4>{{t('profileInfo')}}</h4>
               <p class="hint">生日 {{accountData.profile?.birthday||'-'}} ｜ MBTI {{accountData.profile?.mbti||'-'}}</p>
               <p class="hint">星座 {{accountData.profile?.zodiac||'-'}} ｜ 节奏 {{accountData.profile?.pace||'-'}}</p>
               <p class="hint">预算 {{accountData.profile?.budgetLevel||'-'}} ｜ 作息 {{accountData.profile?.wakeUp||'-'}}</p>
@@ -750,16 +815,16 @@ createApp({
               <p class="hint">技能 {{Array.isArray(accountData.profile?.skills)?accountData.profile.skills.join('、'):accountData.profile?.skills}}</p>
               <p class="hint">勋章 {{userBadges(accountData.user).join(' ｜ ')}}</p>
             </div>
-            <div class="card"><h4>最近行程</h4><div class="trip" v-for="t in (accountData.trips||[])" :key="t.id" @click="openTrip(t.id)" style="cursor:pointer">{{t.destination}} · {{t.departDate}}-{{t.returnDate}}</div></div>
+            <div class="card"><h4>{{t('recentTrips')}}</h4><div class="trip" v-for="t in (accountData.trips||[])" :key="t.id" @click="openTrip(t.id)" style="cursor:pointer">{{t.destination}} · {{t.departDate}}-{{t.returnDate}}</div></div>
           </div>
           <section class="card" style="margin-top:10px">
-            <h4>Ta 的日记</h4>
-            <p class="hint" v-if="!(accountData.mediaPosts||[]).length">暂无日记</p>
+            <h4>{{t('taDiary')}}</h4>
+            <p class="hint" v-if="!(accountData.mediaPosts||[]).length">{{t('noDiary')}}</p>
             <article class="trip trip-clickable" v-for="d in (accountData.mediaPosts||[])" :key="d.id" @click="openDiary(d.id)">
               <div class="row" style="justify-content:space-between"><strong>{{d.caption}}</strong><span class="meta">{{d.location}} · {{fmt(d.createdAt)}}</span></div>
             </article>
           </section>
-          <button v-if="app.fromSearch.account" class="btn ghost" @click="goto('search')">← 返回查询</button>
+          <button v-if="app.fromSearch.account" class="btn ghost" @click="goto('search')">{{t('backSearch')}}</button>
         </section>
       </template>
 
@@ -769,7 +834,7 @@ createApp({
           <p class="hint">发布者：{{tripData.user}} ｜ {{fmt(tripData.createdAt)}} ｜ 点赞 {{tripData.likeCount||0}}</p>
           <p>{{tripData.itinerary}}</p>
           <p class="hint">景点：{{(tripData.spots||[]).join('、')}}</p>
-          <button v-if="app.fromSearch.trip" class="btn ghost" @click="goto('search')">← 返回查询</button>
+          <button v-if="app.fromSearch.trip" class="btn ghost" @click="goto('search')">{{t('backSearch')}}</button>
         </section>
       </template>
 
@@ -780,7 +845,7 @@ createApp({
           <section class="diary-grid">
             <img v-for="(img,i) in diaryData.images" :key="i" :src="img" @click="app.previewSrc=img; $refs.pv.showModal()" />
           </section>
-          <button v-if="app.fromSearch.diary" class="btn ghost" @click="goto('search')" style="margin-top:8px">← 返回查询</button>
+          <button v-if="app.fromSearch.diary" class="btn ghost" @click="goto('search')" style="margin-top:8px">{{t('backSearch')}}</button>
         </section>
       </template>
 
@@ -802,39 +867,39 @@ createApp({
 
       <template v-else-if="app.route==='messages'">
         <section class="card full">
-          <div class="row" style="justify-content:space-between"><h2>消息中心</h2><button class="btn ghost" @click="markAllAsRead">全部已读</button></div>
+          <div class="row" style="justify-content:space-between"><h2>{{t('messageCenter')}}</h2><button class="btn ghost" @click="markAllAsRead">{{t('markRead')}}</button></div>
           <div class="row" style="margin-bottom:.4rem">
-            <button class="btn ghost" @click="app.activeMsgTab='chats'">聊天消息<span v-if="unreadChatCount" class="msg-badge">{{unreadChatCount}}</span></button>
-            <button class="btn ghost" @click="app.activeMsgTab='system'">系统消息<span v-if="unreadSystemCount" class="msg-badge">{{unreadSystemCount}}</span></button>
+            <button class="btn ghost" @click="app.activeMsgTab='chats'">{{t('chatMsg')}}<span v-if="unreadChatCount" class="msg-badge">{{unreadChatCount}}</span></button>
+            <button class="btn ghost" @click="app.activeMsgTab='system'">{{t('sysMsg')}}<span v-if="unreadSystemCount" class="msg-badge">{{unreadSystemCount}}</span></button>
           </div>
           <div v-if="app.activeMsgTab==='chats'">
             <article class="trip trip-clickable" v-for="c in chatPreviews" :key="c.id" @click="openChat(c.peer)">
               <div class="row" style="justify-content:space-between"><strong>{{c.peer}}</strong><span class="meta">{{fmt(c.last?.createdAt)}}</span></div>
               <p class="hint">{{c.last?.text || '暂无内容'}} <span v-if="c.unread">· 未读 {{c.unread}}</span></p>
             </article>
-            <p class="hint" v-if="!chatPreviews.length">暂无聊天消息</p>
+            <p class="hint" v-if="!chatPreviews.length">{{t('noChatMsg')}}</p>
           </div>
           <div v-else>
             <article class="trip" v-for="m in systemMessages" :key="m.id"><strong>系统提醒</strong><p>{{m.text}}</p><p class="meta">{{fmt(m.createdAt)}}</p></article>
-            <p class="hint" v-if="!systemMessages.length">暂无系统消息</p>
+            <p class="hint" v-if="!systemMessages.length">{{t('noSysMsg')}}</p>
           </div>
         </section>
       </template>
 
       <template v-else-if="app.route==='admin'">
         <section class="card full">
-          <h2>管理后台</h2>
+          <h2>{{t('admin')}}</h2>
           <div class="row">
-            <span class="chip">用户 {{adminStats.users}}</span>
-            <span class="chip">行程 {{adminStats.trips}}</span>
-            <span class="chip">日记 {{adminStats.diaries}}</span>
+            <span class="chip">{{t('users')}} {{adminStats.users}}</span>
+            <span class="chip">{{t('trips')}} {{adminStats.trips}}</span>
+            <span class="chip">{{t('diaries')}} {{adminStats.diaries}}</span>
           </div>
-          <h4>最近事件</h4>
+          <h4>{{t('recentEvents')}}</h4>
           <article class="trip" v-for="e in adminStats.events" :key="e.id"><strong>{{e.type}}</strong><p class="meta">{{fmt(e.createdAt)}} · {{JSON.stringify(e.payload)}}</p></article>
         </section>
       </template>
     </main>
 
-    <dialog ref="pv"><img :src="app.previewSrc" style="max-width:88vw;max-height:80vh;border-radius:10px" /><div class="row" style="justify-content:flex-end;margin-top:8px"><button class="btn ghost" @click="$refs.pv.close()">关闭</button></div></dialog>
+    <dialog ref="pv"><img :src="app.previewSrc" style="max-width:88vw;max-height:80vh;border-radius:10px" /><div class="row" style="justify-content:flex-end;margin-top:8px"><button class="btn ghost" @click="$refs.pv.close()">{{t('close')}}</button></div></dialog>
   </div>`
 }).mount('#app');
