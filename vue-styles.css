@@ -45,6 +45,6 @@ dialog{border:none;border-radius:12px;padding:12px;max-width:min(900px,95vw)}dia
 .btn.ghost.liked{background:#fef3c7;color:#92400e;border:1px solid #f59e0b}
 .trip-comments-block{margin-top:8px}
 .brand span{white-space:nowrap}
-.top-userbar .chip{max-width:10em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:inline-block}
+.top-userbar .chip{max-width:none;white-space:nowrap;overflow:visible;text-overflow:clip;display:inline-block}
 .top-userbar .btn.ghost{white-space:nowrap}
-.top-name{max-width:10em}
+.top-name{max-width:none}

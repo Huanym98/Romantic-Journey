@@ -172,9 +172,7 @@ createApp({
       localStorage.setItem(KEYS.LANG, app.lang);
     }
     function shortName(name) {
-      const raw = String(name || '');
-      if (!raw) return '';
-      return raw.length > 10 ? `${raw.slice(0, 10)}…` : raw;
+      return String(name || '');
     }
 
     function goto(route) {
@@ -644,6 +642,7 @@ createApp({
       const events = read(KEYS.ADMIN, []);
       return events
         .filter((e) => ['like-trip', 'comment-trip', 'toggle-follow'].includes(e.type) && e.payload?.to === app.current)
+        .filter((e) => !(e.type === 'like-trip' && e.payload?.from === e.payload?.to))
         .map((e) => {
           if (e.type === 'like-trip') return { id: e.id, text: `${e.payload.from} 点赞了你的行程`, createdAt: e.createdAt };
           if (e.type === 'comment-trip') return { id: e.id, text: `${e.payload.from} 评论了你的行程`, createdAt: e.createdAt };
@@ -773,7 +772,7 @@ createApp({
           <button class="avatar-btn" @click="toggleProfilePanel" :aria-expanded="String(app.showProfilePanel)">
             <img class="avatar sm" :src="app.state.profile?.avatar || '${defaultAvatar}'" alt="avatar" />
           </button>
-          <span class="chip top-name" :title="app.current || t('notLogin')">{{shortName(app.current || t('notLogin'))}}</span>
+          <span class="chip top-name" :title="app.current || t('notLogin')">{{app.current || t('notLogin')}}</span>
           <button class="btn ghost" @click="logout">{{t('logout')}}</button>
         </div>
       </div>
@@ -1004,6 +1003,7 @@ createApp({
             <p class="hint" v-if="!(accountData.mediaPosts||[]).length">{{t('noDiary')}}</p>
             <article class="trip trip-clickable" v-for="d in (accountData.mediaPosts||[])" :key="d.id" @click="openDiary(d.id)">
               <div class="row" style="justify-content:space-between"><strong>{{d.caption}}</strong><span class="meta">{{d.location}} · {{fmt(d.createdAt)}}</span></div>
+              <img v-if="d.cover" :src="d.cover" style="width:100%;max-height:200px;object-fit:cover;border-radius:8px;border:1px solid var(--line);margin-top:6px" />
             </article>
           </section>
           <button v-if="app.fromSearch.account" class="btn ghost" @click="goto('search')">{{t('backSearch')}}</button>
