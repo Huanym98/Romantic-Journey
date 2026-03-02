@@ -171,6 +171,11 @@ createApp({
     function setLang() {
       localStorage.setItem(KEYS.LANG, app.lang);
     }
+    function shortName(name) {
+      const raw = String(name || '');
+      if (!raw) return '';
+      return raw.length > 10 ? `${raw.slice(0, 10)}…` : raw;
+    }
 
     function goto(route) {
       app.route = route;
@@ -681,6 +686,7 @@ createApp({
       fmt,
       t,
       setLang,
+      shortName,
       goto,
       loginOrRegister,
       logout,
@@ -757,7 +763,7 @@ createApp({
           <button class="avatar-btn" @click="toggleProfilePanel" :aria-expanded="String(app.showProfilePanel)">
             <img class="avatar sm" :src="app.state.profile?.avatar || '${defaultAvatar}'" alt="avatar" />
           </button>
-          <span class="chip">{{app.current || t('notLogin')}}</span>
+          <span class="chip top-name" :title="app.current || t('notLogin')">{{shortName(app.current || t('notLogin'))}}</span>
           <button class="btn ghost" @click="logout">{{t('logout')}}</button>
         </div>
       </div>
