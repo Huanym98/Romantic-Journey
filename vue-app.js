@@ -36,6 +36,7 @@ function normalizeState(parsed) {
       budgetLevel: profile.budgetLevel || '舒适',
       wakeUp: profile.wakeUp || '自然醒',
       social: profile.social || '适中',
+      bio: profile.bio || '',
       skills: Array.isArray(profile.skills) ? profile.skills : list(profile.skills)
     },
     trips: Array.isArray(s.trips) ? s.trips : [],
@@ -69,7 +70,7 @@ createApp({
       social: getSocial(),
       state: normalizeState({}),
       auth: { nickname: '', password: '' },
-      profileForm: { birthday: '', mbti: '', zodiac: '', pace: '平衡', budgetLevel: '舒适', wakeUp: '自然醒', social: '适中', skillsText: '' },
+      profileForm: { birthday: '', mbti: '', zodiac: '', pace: '平衡', budgetLevel: '舒适', wakeUp: '自然醒', social: '适中', bio: '', skillsText: '' },
       tripForm: { destination: '', departDate: '', returnDate: '', budget: 2000, tags: '', spots: '', itinerary: '', pace: '平衡', wakeUp: '自然醒', social: '适中' },
       mediaForm: { location: '', caption: '', checkin: '' },
       search: '',
@@ -99,6 +100,7 @@ createApp({
         budgetLevel: app.state.profile.budgetLevel || '舒适',
         wakeUp: app.state.profile.wakeUp || '自然醒',
         social: app.state.profile.social || '适中',
+        bio: app.state.profile.bio || '',
         skillsText: Array.isArray(app.state.profile.skills) ? app.state.profile.skills.join(',') : ''
       };
     }
@@ -203,6 +205,7 @@ createApp({
         budgetLevel: app.profileForm.budgetLevel,
         wakeUp: app.profileForm.wakeUp,
         social: app.profileForm.social,
+        bio: app.profileForm.bio,
         skills: list(app.profileForm.skillsText)
       };
       setState(app.current, app.state);
@@ -489,7 +492,7 @@ createApp({
           <label>社交偏好
             <select v-model="app.profileForm.social"><option>外向</option><option>适中</option><option>安静</option></select>
           </label>
-          <input class="full" v-model="app.profileForm.skillsText" placeholder="技能标签（逗号分隔）" />
+          <input class="full" v-model="app.profileForm.bio" placeholder="个人简介 / 介绍" />
           <button class="btn full">保存资料</button>
         </form>
       </div>
@@ -619,6 +622,7 @@ createApp({
               <p class="hint">星座 {{accountData.profile?.zodiac||'-'}} ｜ 节奏 {{accountData.profile?.pace||'-'}}</p>
               <p class="hint">预算 {{accountData.profile?.budgetLevel||'-'}} ｜ 作息 {{accountData.profile?.wakeUp||'-'}}</p>
               <p class="hint">社交 {{accountData.profile?.social||'-'}}</p>
+              <p class="hint">简介 {{accountData.profile?.bio||'-'}}</p>
               <p class="hint">技能 {{Array.isArray(accountData.profile?.skills)?accountData.profile.skills.join('、'):accountData.profile?.skills}}</p>
             </div>
             <div class="card"><h4>最近行程</h4><div class="trip" v-for="t in (accountData.trips||[]).slice(0,4)" :key="t.id">{{t.destination}} · {{t.departDate}}-{{t.returnDate}}</div></div>
