@@ -80,6 +80,7 @@ createApp({
       previewSrc: '',
       chatPeer: '',
       chatDraft: '',
+      fromSearch: { account: false, trip: false, diary: false },
       showProfilePanel: false,
       supportCount: Number(localStorage.getItem(KEYS.SUPPORT) || 0),
       feedback: { content: '', email: '' }
@@ -102,7 +103,13 @@ createApp({
       };
     }
 
-    const usersMap = computed(() => Object.fromEntries(app.users.map((u) => [u.nickname, u])));
+    function calcBadges(state) {
+      const badges = [];
+      if ((state.mediaPosts || []).length > 0) badges.push('📸 旅行记录官');
+      if ((state.trips || []).length > 0) badges.push('🤝 初次结伴');
+      if ((state.trips || []).length >= 3) badges.push('🧭 行程达人');
+      return badges.length ? badges : ['🌱 新人旅行者'];
+    }
     const stateByUser = computed(() => {
       const map = {};
       app.users.forEach((u) => { map[u.nickname] = getState(u.nickname); });
@@ -112,7 +119,13 @@ createApp({
       const rows = [];
       app.users.forEach((u) => {
         const s = stateByUser.value[u.nickname] || normalizeState({});
-        s.trips.forEach((t) => rows.push({ ...t, user: t.user || u.nickname, avatar: t.avatar || s.profile.avatar || defaultAvatar }));
+        s.trips.forEach((t) => rows.push({
+          ...t,
+          user: t.user || u.nickname,
+          avatar: t.avatar || s.profile.avatar || defaultAvatar,
+          ownerSkills: Array.isArray(s.profile.skills) ? s.profile.skills : [],
+          ownerBadges: calcBadges(s)
+        }));
       });
       return rows.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
     });
@@ -125,9 +138,10 @@ createApp({
       return rows.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
     });
 
-    const filteredUsers = computed(() => app.users.filter((u) => u.nickname.toLowerCase().includes(app.search.toLowerCase())));
-    const filteredTrips = computed(() => allTrips.value.filter((t) => [t.user, t.destination, t.itinerary, (t.tags || []).join(',')].join('|').toLowerCase().includes(app.search.toLowerCase())));
-    const filteredDiaries = computed(() => allDiaries.value.filter((d) => [d.user, d.caption, d.location, d.checkin].join('|').toLowerCase().includes(app.search.toLowerCase())));
+    const hasSearchKeyword = computed(() => app.search.trim().length > 0);
+    const filteredUsers = computed(() => hasSearchKeyword.value ? app.users.filter((u) => u.nickname.toLowerCase().includes(app.search.toLowerCase())) : []);
+    const filteredTrips = computed(() => hasSearchKeyword.value ? allTrips.value.filter((t) => [t.user, t.destination, t.itinerary, (t.tags || []).join(',')].join('|').toLowerCase().includes(app.search.toLowerCase())) : []);
+    const filteredDiaries = computed(() => hasSearchKeyword.value ? allDiaries.value.filter((d) => [d.user, d.caption, d.location, d.checkin].join('|').toLowerCase().includes(app.search.toLowerCase())) : []);
 
     function upsertCurrentUser() {
       if (!app.current) return;
@@ -311,9 +325,9 @@ createApp({
       addEvent('comment-trip', { from: app.current, to: trip.user, tripId: trip.id });
     }
 
-    function openAccount(user) { app.selectedUser = user; goto('account'); }
-    function openTrip(id) { app.selectedTripId = id; goto('trip'); }
-    function openDiary(id) { app.selectedDiaryId = id; goto('diary'); }
+    function openAccount(user, source = '') { app.selectedUser = user; app.fromSearch.account = source === 'search'; goto('account'); }
+    function openTrip(id, source = '') { app.selectedTripId = id; app.fromSearch.trip = source === 'search'; goto('trip'); }
+    function openDiary(id, source = '') { app.selectedDiaryId = id; app.fromSearch.diary = source === 'search'; goto('diary'); }
     function openChat(user) { app.chatPeer = user; goto('chat'); }
 
     function ensureChat() {
@@ -369,13 +383,7 @@ createApp({
         events: events.slice(0, 50)
       };
     });
-    const myBadges = computed(() => {
-      const badges = [];
-      if ((app.state.mediaPosts || []).length > 0) badges.push('📸 旅行记录官');
-      if ((app.state.trips || []).length > 0) badges.push('🤝 初次结伴');
-      if ((app.state.trips || []).length >= 3) badges.push('🧭 行程达人');
-      return badges.length ? badges : ['🌱 新人旅行者'];
-    });
+    const myBadges = computed(() => calcBadges(app.state));
     const followingCount = computed(() => {
       if (!accountData.value?.user) return 0;
       return (app.social.follows?.[accountData.value.user] || []).length;
@@ -422,6 +430,7 @@ createApp({
       filteredUsers,
       filteredTrips,
       filteredDiaries,
+      hasSearchKeyword,
       accountData,
       tripData,
       diaryData,
@@ -458,13 +467,28 @@ createApp({
         <div class="row" style="justify-content:space-between"><h3 style="margin:0">个人资料</h3><button class="btn ghost" @click="closeProfilePanel">关闭</button></div>
         <form class="grid" @submit.prevent="saveProfile" style="margin-top:8px">
           <label class="full">头像 <input type="file" accept="image/*" @change="onAvatarChange" /></label>
-          <input v-model="app.profileForm.birthday" placeholder="生日" />
-          <input v-model="app.profileForm.mbti" placeholder="MBTI" />
-          <input v-model="app.profileForm.zodiac" placeholder="星座" />
-          <input v-model="app.profileForm.pace" placeholder="旅行节奏" />
-          <input v-model="app.profileForm.budgetLevel" placeholder="预算偏好" />
-          <input v-model="app.profileForm.wakeUp" placeholder="作息" />
-          <input v-model="app.profileForm.social" placeholder="社交偏好" />
+          <label>生日 <input v-model="app.profileForm.birthday" type="date" /></label>
+          <label>MBTI
+            <select v-model="app.profileForm.mbti">
+              <option value="">请选择</option><option>ENFP</option><option>ENFJ</option><option>ENTP</option><option>ENTJ</option>
+              <option>INFP</option><option>INFJ</option><option>INTP</option><option>INTJ</option>
+              <option>ESFP</option><option>ESFJ</option><option>ESTP</option><option>ESTJ</option>
+              <option>ISFP</option><option>ISFJ</option><option>ISTP</option><option>ISTJ</option>
+            </select>
+          </label>
+          <label>星座 <input v-model="app.profileForm.zodiac" placeholder="如：金牛座" /></label>
+          <label>旅行节奏
+            <select v-model="app.profileForm.pace"><option>特种兵式</option><option>平衡</option><option>慢游</option></select>
+          </label>
+          <label>预算偏好
+            <select v-model="app.profileForm.budgetLevel"><option>经济</option><option>舒适</option><option>品质</option></select>
+          </label>
+          <label>作息
+            <select v-model="app.profileForm.wakeUp"><option>早起</option><option>自然醒</option><option>夜猫</option></select>
+          </label>
+          <label>社交偏好
+            <select v-model="app.profileForm.social"><option>外向</option><option>适中</option><option>安静</option></select>
+          </label>
           <input class="full" v-model="app.profileForm.skillsText" placeholder="技能标签（逗号分隔）" />
           <button class="btn full">保存资料</button>
         </form>
@@ -519,6 +543,8 @@ createApp({
               <span class="meta">{{fmt(trip.createdAt)}}</span>
             </div>
             <p class="hint">预算 ¥{{trip.budget}} ｜ 标签 {{(trip.tags||[]).join(' / ')}}</p>
+            <p class="hint" v-if="trip.ownerBadges?.length">勋章：{{trip.ownerBadges.join(' ｜ ')}}</p>
+            <p class="hint" v-if="trip.ownerSkills?.length">技能：{{trip.ownerSkills.join('、')}}</p>
             <p>{{trip.itinerary}}</p>
             <div class="row">
               <button class="btn" @click.stop="likeTrip(trip)">👍 {{trip.likeCount||0}}</button>
@@ -531,12 +557,6 @@ createApp({
           </article>
         </section>
 
-        <section class="card full">
-          <h3>我的勋章</h3>
-          <div class="row">
-            <span class="chip" v-for="(badge, i) in myBadges" :key="i">{{badge}}</span>
-          </div>
-        </section>
       </template>
 
       <template v-else-if="app.route==='my'">
@@ -558,20 +578,27 @@ createApp({
             <div class="row" style="margin-top:6px"><button class="btn ghost" @click="openDiary(d.id)">查看详情</button></div>
           </article>
         </section>
+        <section class="card full">
+          <h3>我的勋章</h3>
+          <div class="row"><span class="chip" v-for="(badge, i) in myBadges" :key="i">{{badge}}</span></div>
+        </section>
       </template>
 
       <template v-else-if="app.route==='search'">
         <section class="card full">
           <h3>全站查询</h3>
           <input v-model="app.search" placeholder="搜索用户/行程/日记" />
-          <h4>账户</h4>
-          <div class="row">
-            <button class="btn ghost" v-for="u in filteredUsers" :key="u.nickname" @click="openAccount(u.nickname)">{{u.nickname}}</button>
-          </div>
-          <h4>行程</h4>
-          <article class="trip trip-clickable" v-for="t in filteredTrips.slice(0,8)" :key="t.id" @click="openTrip(t.id)"><strong>{{t.user}} · {{t.destination}}</strong></article>
-          <h4>日记</h4>
-          <article class="trip" v-for="d in filteredDiaries.slice(0,8)" :key="d.id"><strong>{{d.caption}}</strong> <button class="btn ghost" @click="openDiary(d.id)">详情</button></article>
+          <template v-if="hasSearchKeyword">
+            <h4>账户</h4>
+            <div class="row">
+              <button class="btn ghost" v-for="u in filteredUsers" :key="u.nickname" @click="openAccount(u.nickname, 'search')">{{u.nickname}}</button>
+            </div>
+            <h4>行程</h4>
+            <article class="trip trip-clickable" v-for="t in filteredTrips.slice(0,8)" :key="t.id" @click="openTrip(t.id, 'search')"><strong>{{t.user}} · {{t.destination}}</strong></article>
+            <h4>日记</h4>
+            <article class="trip trip-clickable" v-for="d in filteredDiaries.slice(0,8)" :key="d.id" @click="openDiary(d.id, 'search')"><strong>{{d.caption}}</strong></article>
+          </template>
+          <p v-else class="hint">请输入关键词后再查询结果。</p>
         </section>
       </template>
 
@@ -596,7 +623,7 @@ createApp({
             </div>
             <div class="card"><h4>最近行程</h4><div class="trip" v-for="t in (accountData.trips||[]).slice(0,4)" :key="t.id">{{t.destination}} · {{t.departDate}}-{{t.returnDate}}</div></div>
           </div>
-          <button class="btn ghost" @click="goto('search')">← 返回查询</button>
+          <button v-if="app.fromSearch.account" class="btn ghost" @click="goto('search')">← 返回查询</button>
         </section>
       </template>
 
@@ -606,7 +633,7 @@ createApp({
           <p class="hint">发布者：{{tripData.user}} ｜ {{fmt(tripData.createdAt)}} ｜ 点赞 {{tripData.likeCount||0}}</p>
           <p>{{tripData.itinerary}}</p>
           <p class="hint">景点：{{(tripData.spots||[]).join('、')}}</p>
-          <button class="btn ghost" @click="goto('search')">← 返回查询</button>
+          <button v-if="app.fromSearch.trip" class="btn ghost" @click="goto('search')">← 返回查询</button>
         </section>
       </template>
 
@@ -617,7 +644,7 @@ createApp({
           <section class="diary-grid">
             <img v-for="(img,i) in diaryData.images" :key="i" :src="img" @click="app.previewSrc=img; $refs.pv.showModal()" />
           </section>
-          <button class="btn ghost" @click="goto('search')" style="margin-top:8px">← 返回查询</button>
+          <button v-if="app.fromSearch.diary" class="btn ghost" @click="goto('search')" style="margin-top:8px">← 返回查询</button>
         </section>
       </template>
 
