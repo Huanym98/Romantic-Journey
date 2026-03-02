@@ -515,13 +515,27 @@ createApp({
         <section class="card">
           <h3>发布行程</h3>
           <form class="grid" @submit.prevent="postTrip">
-            <input v-model="app.tripForm.destination" placeholder="目的地" required />
-            <input v-model="app.tripForm.budget" type="number" placeholder="预算" required />
-            <input v-model="app.tripForm.departDate" type="date" required />
-            <input v-model="app.tripForm.returnDate" type="date" required />
-            <input class="full" v-model="app.tripForm.tags" placeholder="标签（逗号分隔）" required />
-            <input class="full" v-model="app.tripForm.spots" placeholder="景点（逗号分隔）" required />
-            <textarea class="full" v-model="app.tripForm.itinerary" placeholder="详细行程" required></textarea>
+            <label>目的地
+              <input v-model="app.tripForm.destination" placeholder="例如：首尔" required />
+            </label>
+            <label>预算（元）
+              <input v-model="app.tripForm.budget" type="number" placeholder="例如：5000" required />
+            </label>
+            <label>出发日期
+              <input v-model="app.tripForm.departDate" type="date" required />
+            </label>
+            <label>返程日期
+              <input v-model="app.tripForm.returnDate" type="date" required />
+            </label>
+            <label class="full">行程标签（逗号分隔）
+              <input v-model="app.tripForm.tags" placeholder="如：citywalk,美食,摄影" required />
+            </label>
+            <label class="full">想去景点（逗号分隔）
+              <input v-model="app.tripForm.spots" placeholder="如：首尔塔,明洞" required />
+            </label>
+            <label class="full">详细行程
+              <textarea v-model="app.tripForm.itinerary" placeholder="例如：D1 上午明洞，D2 弘大 citywalk" required></textarea>
+            </label>
             <button class="btn full">发布行程</button>
           </form>
         </section>
