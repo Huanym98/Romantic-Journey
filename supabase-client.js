@@ -271,23 +271,24 @@
 
     const messages = Array.isArray(chat.messages) ? chat.messages : [];
     for (const msg of messages) {
-      await syncChatMessage(chat.id, msg.sender, msg.text, msg.createdAt);
+      await syncChatMessage(chat.id, msg.from || msg.sender, msg.text, msg.createdAt, msg.id);
     }
   }
 
-  async function syncChatMessage(chatId, senderNickname, content, createdAt) {
+  async function syncChatMessage(chatId, senderNickname, content, createdAt, messageId) {
     if (!chatId || !senderNickname || !content) return;
     const senderId = await ensureUser(senderNickname);
     if (!senderId) return;
     await request('chat_messages', {
       method: 'POST',
       body: JSON.stringify({
+        id: messageId || undefined,
         chat_id: chatId,
         sender_id: senderId,
         content,
         created_at: createdAt || new Date().toISOString()
       }),
-      headers: { Prefer: 'return=minimal' }
+      headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }
     });
   }
 
@@ -323,6 +324,79 @@
     }
   }
 
+  async function syncTripCommentLike(commentId, nickname, liked) {
+    if (!commentId || !nickname) return;
+    const userId = await ensureUser(nickname);
+    if (!userId) return;
+    const filter = `comment_id=eq.${encodeURIComponent(commentId)}&user_id=eq.${encodeURIComponent(userId)}`;
+    if (liked) {
+      await request('trip_comment_likes', {
+        method: 'POST',
+        body: JSON.stringify({ comment_id: commentId, user_id: userId }),
+        headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }
+      });
+    } else {
+      await request(`trip_comment_likes?${filter}`, { method: 'DELETE', headers: { Prefer: 'return=minimal' } });
+    }
+  }
+
+  async function syncMediaCommentLike(commentId, nickname, liked) {
+    if (!commentId || !nickname) return;
+    const userId = await ensureUser(nickname);
+    if (!userId) return;
+    const filter = `comment_id=eq.${encodeURIComponent(commentId)}&user_id=eq.${encodeURIComponent(userId)}`;
+    if (liked) {
+      await request('media_comment_likes', {
+        method: 'POST',
+        body: JSON.stringify({ comment_id: commentId, user_id: userId }),
+        headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }
+      });
+    } else {
+      await request(`media_comment_likes?${filter}`, { method: 'DELETE', headers: { Prefer: 'return=minimal' } });
+    }
+  }
+
+  async function syncNoticeState(nickname, noticeState = {}, chats = []) {
+    if (!nickname) return;
+    const userId = await ensureUser(nickname);
+    if (!userId) return;
+    const rows = [{
+      user_id: userId,
+      scope: 'notifications',
+      last_read_at: noticeState.systemReadAt || new Date().toISOString()
+    }];
+    (Array.isArray(chats) ? chats : []).forEach((chat) => {
+      if (!chat?.id) return;
+      rows.push({
+        user_id: userId,
+        scope: `chat:${chat.id}`,
+        last_read_at: noticeState.chatReadAt?.[chat.id] || new Date().toISOString()
+      });
+    });
+    await request('user_read_state', {
+      method: 'POST',
+      body: JSON.stringify(rows),
+      headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }
+    });
+  }
+
+  async function syncAdminEvent(eventType, payload = {}, createdAt) {
+    if (!eventType) return;
+    const actorNickname = payload.user || payload.from || payload.actor || null;
+    const userId = actorNickname ? await ensureUser(actorNickname).catch(() => null) : null;
+    await request('admin_events', {
+      method: 'POST',
+      body: JSON.stringify({
+        event_type: eventType,
+        payload,
+        user_id: userId || null,
+        user_nickname: actorNickname,
+        created_at: createdAt || new Date().toISOString()
+      }),
+      headers: { Prefer: 'return=minimal' }
+    });
+  }
+
   global.RJSupabase = {
     URL_KEY,
     ANON_KEY,
@@ -344,6 +418,10 @@
     syncChat,
     syncChatMessage,
     syncFollow,
-    syncBlock
+    syncBlock,
+    syncTripCommentLike,
+    syncMediaCommentLike,
+    syncNoticeState,
+    syncAdminEvent
   };
 })(window);

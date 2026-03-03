@@ -35,6 +35,19 @@ localStorage.setItem('romanticJourneySupabaseAnonKey', '<your-anon-key>');
 配置后重新打开页面并执行完整流程，即可在 Supabase 各表中看到同步数据。
 
 
+AI 行程自动生成（Vue）默认使用 `gpt-5.2`，不向终端用户展示 Key 输入框。请在部署时配置：
+
+```js
+// 二选一：推荐 window 变量（页面加载前注入）
+window.RJ_OPENAI_API_KEY = '<your-openai-key>';
+
+// 或本地调试写入 localStorage
+localStorage.setItem('romanticJourneyOpenAIKey', '<your-openai-key>');
+```
+
+数据库结构建议直接使用：`sql/mvp_schema.sql`（已覆盖当前前端所有写入行为的表结构）。
+
+
 ## Vue 重构版（简约 UI）
 
 新增 Vue 单页版本：`vue-app.html`，覆盖注册/登录、资料编辑（含头像上传）、主页发布、搜索、账户主页、行程详情、日记九宫格详情、关注/拉黑、私聊、管理后台等核心流程，数据结构继续兼容现有 `localStorage` keys。

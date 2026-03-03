@@ -123,9 +123,16 @@ function getSocial() {
 }
 function setSocial(v) { write(KEYS.SOCIAL, v); }
 function addEvent(type, payload = {}) {
+  const event = { id: uid(), type, payload, createdAt: now() };
   const events = read(KEYS.ADMIN, []);
-  events.unshift({ id: uid(), type, payload, createdAt: now() });
+  events.unshift(event);
   write(KEYS.ADMIN, events.slice(0, 500));
+  const client = window.RJSupabase;
+  if (client?.isEnabled?.() && typeof client.syncAdminEvent === 'function') {
+    Promise.resolve(client.syncAdminEvent(type, payload, event.createdAt)).catch((err) => {
+      console.warn('[RJSupabase.syncAdminEvent]', err?.message || err);
+    });
+  }
 }
 function getNoticeState() {
   const n = read(KEYS.NOTICE, { chatReadAt: {}, systemReadAt: '' });
@@ -559,6 +566,7 @@ createApp({
       setState(trip.user, ownerState);
       app.stateVersion += 1;
       addEvent('like-comment', { from: app.current, to: trip.user, tripId: trip.id, commentId: comment.id });
+      callSupabase('syncTripCommentLike', comment.id, app.current, idx < 0);
     }
 
     function commentLikers(comment) {
@@ -636,6 +644,7 @@ createApp({
       setState(diary.user, ownerState);
       app.stateVersion += 1;
       addEvent('like-diary-comment', { from: app.current, to: diary.user, diaryId: diary.id, commentId: comment.id });
+      callSupabase('syncMediaCommentLike', comment.id, app.current, idx < 0);
     }
     function sortedDiaryComments(diary) {
       const list = Array.isArray(diary?.comments) ? [...diary.comments] : [];
@@ -803,6 +812,8 @@ createApp({
       if (!chat) {
         chat = { id: uid(), members, messages: [] };
         app.social.chats.unshift(chat);
+        setSocial(app.social);
+        callSupabase('syncChat', chat, app.current);
       }
       return chat;
     }
@@ -811,17 +822,20 @@ createApp({
       if (!text) return;
       const chat = ensureChat();
       if (!chat) return;
-      chat.messages.push({ id: uid(), from: app.current, text, createdAt: now() });
+      const message = { id: uid(), from: app.current, text, createdAt: now() };
+      chat.messages.push(message);
       app.chatDraft = '';
       setSocial(app.social);
       app.stateVersion += 1;
-      addEvent('send-chat', { from: app.current, to: app.chatPeer });
+      addEvent('send-chat', { from: app.current, to: app.chatPeer, chatId: chat.id, messageId: message.id });
+      callSupabase('syncChatMessage', chat.id, app.current, text, message.createdAt, message.id);
     }
     function markAllAsRead() {
       const stamp = now();
       app.social.chats.forEach((c) => { noticeState.chatReadAt[c.id] = stamp; });
       noticeState.systemReadAt = stamp;
       setNoticeState(noticeState);
+      callSupabase('syncNoticeState', app.current, noticeState, app.social.chats);
     }
 
     const accountData = computed(() => {
@@ -1104,8 +1118,9 @@ createApp({
             <div class="row" style="align-items:flex-end">
               <button class="btn ghost" type="button" :disabled="app.ai.generating" @click="generateTripByAI">{{app.ai.generating ? 'AI 生成中...' : '🤖 AI自动生成行程（GPT-5.2）'}}</button>
             </div>
+            <p class="hint full" v-if="app.ai.generating">AI 正在生成中，请稍候…</p>
             <p class="hint full" v-if="app.ai.error" style="color:#b91c1c">{{app.ai.error}}</p>
-            <button class="btn full">{{t('publish')}}</button>
+            <button class="btn full" :disabled="app.ai.generating">{{t('publish')}}</button>
           </form>
         </section>
         <aside class="card">
