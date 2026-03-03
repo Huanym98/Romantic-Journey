@@ -27,7 +27,7 @@ const I18N = {
   'zh-CN': {
     appName: 'Romantic Journey', navHome: '首页', navMy: '我的主页', navMsg: '消息', navSearch: '查询', navAdmin: '后台',
     logout: '退出', notLogin: '未登录', profile: '个人资料', close: '关闭', saveProfile: '保存资料',
-    loginTitle: '登录 / 注册（Vue版）', loginHint: '输入昵称 + 密码，自动判断登录或注册。', nickname: '昵称', password: '密码', continue: '继续',
+    loginTitle: '登录 / 注册（Vue版）', loginHint: '请手动选择登录或注册。', nickname: '昵称', password: '密码', loginBtn: '登录', registerBtn: '注册',
     publishTrip: '发布行程', destination: '目的地', budgetYuan: '预算（元）', departDate: '出发日期', returnDate: '返程日期',
     tripTags: '行程标签（逗号分隔）', spotsWant: '想去景点（逗号分隔）', itinerary: '详细行程', publish: '发布',
     messagePreview: '消息预览', noMessage: '暂无消息', viewAllMessages: '查看全部消息',
@@ -41,7 +41,7 @@ const I18N = {
   },
   en: {
     appName: 'Romantic Journey', navHome: 'Home', navMy: 'My Home', navMsg: 'Messages', navSearch: 'Search', navAdmin: 'Admin', logout: 'Logout', notLogin: 'Guest',
-    profile: 'Profile', close: 'Close', saveProfile: 'Save Profile', loginTitle: 'Login / Register (Vue)', loginHint: 'Enter nickname + password to login/register automatically.', nickname: 'Nickname', password: 'Password', continue: 'Continue',
+    profile: 'Profile', close: 'Close', saveProfile: 'Save Profile', loginTitle: 'Login / Register (Vue)', loginHint: 'Please choose login or register manually.', nickname: 'Nickname', password: 'Password', loginBtn: 'Login', registerBtn: 'Register',
     publishTrip: 'Publish Trip', destination: 'Destination', budgetYuan: 'Budget (CNY)', departDate: 'Departure', returnDate: 'Return', tripTags: 'Tags (comma-separated)', spotsWant: 'Spots (comma-separated)', itinerary: 'Itinerary', publish: 'Publish',
     messagePreview: 'Message Preview', noMessage: 'No messages', viewAllMessages: 'View all messages', tripSquare: 'Trip Square', searchAll: 'Search user/destination',
     myTrips: 'My Trips', noTripYet: 'No trips yet', viewDetail: 'View', myDiaries: 'My Diaries', myBadges: 'My Badges',
@@ -52,7 +52,7 @@ const I18N = {
   },
   ko: {
     appName: 'Romantic Journey', navHome: '홈', navMy: '내 홈', navMsg: '메시지', navSearch: '검색', navAdmin: '관리', logout: '로그아웃', notLogin: '게스트',
-    profile: '프로필', close: '닫기', saveProfile: '저장', loginTitle: '로그인 / 회원가입 (Vue)', loginHint: '닉네임+비밀번호 입력 시 자동 로그인/가입', nickname: '닉네임', password: '비밀번호', continue: '계속',
+    profile: '프로필', close: '닫기', saveProfile: '저장', loginTitle: '로그인 / 회원가입 (Vue)', loginHint: '로그인 또는 회원가입을 직접 선택하세요.', nickname: '닉네임', password: '비밀번호', loginBtn: '로그인', registerBtn: '회원가입',
     publishTrip: '여행 등록', destination: '목적지', budgetYuan: '예산', departDate: '출발일', returnDate: '복귀일', tripTags: '태그(쉼표)', spotsWant: '가고 싶은 곳(쉼표)', itinerary: '일정', publish: '등록',
     messagePreview: '메시지 미리보기', noMessage: '메시지 없음', viewAllMessages: '전체 메시지', tripSquare: '여행 광장', searchAll: '사용자/목적지 검색',
     myTrips: '내 여행', noTripYet: '등록한 여행이 없습니다', viewDetail: '상세보기', myDiaries: '내 다이어리', myBadges: '내 배지',
@@ -63,7 +63,7 @@ const I18N = {
   },
   ja: {
     appName: 'Romantic Journey', navHome: 'ホーム', navMy: 'マイページ', navMsg: 'メッセージ', navSearch: '検索', navAdmin: '管理', logout: 'ログアウト', notLogin: 'ゲスト',
-    profile: 'プロフィール', close: '閉じる', saveProfile: '保存', loginTitle: 'ログイン / 登録（Vue）', loginHint: 'ニックネーム＋パスワードで自動ログイン/登録', nickname: 'ニックネーム', password: 'パスワード', continue: '続行',
+    profile: 'プロフィール', close: '閉じる', saveProfile: '保存', loginTitle: 'ログイン / 登録（Vue）', loginHint: 'ログインか登録を手動で選択してください。', nickname: 'ニックネーム', password: 'パスワード', loginBtn: 'ログイン', registerBtn: '登録',
     publishTrip: '旅程を投稿', destination: '目的地', budgetYuan: '予算', departDate: '出発日', returnDate: '帰着日', tripTags: 'タグ（カンマ）', spotsWant: '行きたい場所（カンマ）', itinerary: '詳細日程', publish: '投稿',
     messagePreview: 'メッセージプレビュー', noMessage: 'メッセージなし', viewAllMessages: 'すべて表示', tripSquare: '旅程広場', searchAll: 'ユーザー/目的地を検索',
     myTrips: '自分の旅程', noTripYet: 'まだ旅程がありません', viewDetail: '詳細を見る', myDiaries: '自分の日記', myBadges: '自分のバッジ',
@@ -74,7 +74,7 @@ const I18N = {
   },
   fr: {
     appName: 'Romantic Journey', navHome: 'Accueil', navMy: 'Mon espace', navMsg: 'Messages', navSearch: 'Recherche', navAdmin: 'Admin', logout: 'Déconnexion', notLogin: 'Invité',
-    profile: 'Profil', close: 'Fermer', saveProfile: 'Enregistrer', loginTitle: 'Connexion / Inscription (Vue)', loginHint: 'Entrez pseudo + mot de passe pour connexion/inscription auto.', nickname: 'Pseudo', password: 'Mot de passe', continue: 'Continuer',
+    profile: 'Profil', close: 'Fermer', saveProfile: 'Enregistrer', loginTitle: 'Connexion / Inscription (Vue)', loginHint: 'Choisissez manuellement connexion ou inscription.', nickname: 'Pseudo', password: 'Mot de passe', loginBtn: 'Connexion', registerBtn: 'Inscription',
     publishTrip: 'Publier un voyage', destination: 'Destination', budgetYuan: 'Budget', departDate: 'Départ', returnDate: 'Retour', tripTags: 'Tags (virgule)', spotsWant: 'Lieux souhaités (virgule)', itinerary: 'Itinéraire', publish: 'Publier',
     messagePreview: 'Aperçu des messages', noMessage: 'Aucun message', viewAllMessages: 'Voir tous les messages', tripSquare: 'Place des voyages', searchAll: 'Rechercher utilisateur/destination',
     myTrips: 'Mes voyages', noTripYet: 'Aucun voyage publié', viewDetail: 'Voir détail', myDiaries: 'Mes journaux', myBadges: 'Mes badges',
@@ -360,20 +360,42 @@ createApp({
       saveUsers(app.users);
     }
 
-    function loginOrRegister() {
+    function login() {
       const nickname = app.auth.nickname.trim();
-      if (!nickname) return;
-      let found = app.users.find((u) => u.nickname === nickname);
+      const password = app.auth.password;
+      if (!nickname || !password) return;
+      const found = app.users.find((u) => u.nickname === nickname);
       if (!found) {
-        found = { nickname, password: app.auth.password, firstLogin: true };
-        app.users.push(found);
-        saveUsers(app.users);
-        addEvent('register', { user: nickname });
+        alert('用户不存在，请先注册');
+        return;
+      }
+      if ((found.password || '') !== password) {
+        alert('密码错误');
+        return;
       }
       localStorage.setItem(KEYS.CURRENT, nickname);
       app.current = nickname;
       refreshMine();
-      callSupabase('ensureUser', nickname, app.auth.password || '123456');
+      goto('home');
+    }
+
+    function register() {
+      const nickname = app.auth.nickname.trim();
+      const password = app.auth.password;
+      if (!nickname || !password) return;
+      const found = app.users.find((u) => u.nickname === nickname);
+      if (found) {
+        alert('用户已存在，请直接登录');
+        return;
+      }
+      const user = { nickname, password, firstLogin: true };
+      app.users.push(user);
+      saveUsers(app.users);
+      addEvent('register', { user: nickname });
+      localStorage.setItem(KEYS.CURRENT, nickname);
+      app.current = nickname;
+      refreshMine();
+      callSupabase('ensureUser', nickname, password);
       goto('home');
     }
 
@@ -949,7 +971,8 @@ createApp({
       setLang,
       shortName,
       goto,
-      loginOrRegister,
+      login,
+      register,
       logout,
       toggleProfilePanel,
       closeProfilePanel,
@@ -1086,7 +1109,10 @@ createApp({
         <div class="grid">
           <input v-model="app.auth.nickname" :placeholder="t('nickname')" />
           <input v-model="app.auth.password" type="password" :placeholder="t('password')" />
-          <button class="btn full" @click="loginOrRegister">{{t('continue')}}</button>
+          <div class="row">
+            <button class="btn" style="flex:1" @click="login">{{t('loginBtn')}}</button>
+            <button class="btn ghost" style="flex:1" @click="register">{{t('registerBtn')}}</button>
+          </div>
         </div>
       </div>
     </section>
