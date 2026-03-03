@@ -175,6 +175,14 @@ createApp({
       return String(name || '');
     }
 
+    function callSupabase(method, ...args) {
+      const client = window.RJSupabase;
+      if (!client || typeof client[method] !== 'function' || !client.isEnabled?.()) return;
+      Promise.resolve(client[method](...args)).catch((err) => {
+        console.warn(`[RJSupabase.${method}]`, err?.message || err);
+      });
+    }
+
     function goto(route) {
       app.route = route;
       location.hash = `/${route}`;
@@ -272,6 +280,7 @@ createApp({
       localStorage.setItem(KEYS.CURRENT, nickname);
       app.current = nickname;
       refreshMine();
+      callSupabase('ensureUser', nickname, app.auth.password || '123456');
       goto('home');
     }
 
@@ -316,6 +325,7 @@ createApp({
       setState(app.current, app.state);
       app.stateVersion += 1;
       addEvent('profile-save', { user: app.current });
+      callSupabase('syncUserProfile', app.current, app.state.profile);
       app.showProfilePanel = false;
       alert('资料已保存');
     }
@@ -359,9 +369,11 @@ createApp({
         comments: [],
         createdAt: now()
       });
+      const createdTrip = app.state.trips[0];
       setState(app.current, app.state);
       app.stateVersion += 1;
       addEvent('publish-trip', { user: app.current });
+      callSupabase('syncTrip', createdTrip);
       app.tripForm = { destination: '', departDate: '', returnDate: '', budget: 2000, tags: '', spots: '', itinerary: '', pace: '平衡', wakeUp: '自然醒', social: '适中' };
     }
 
@@ -387,6 +399,7 @@ createApp({
           comments: []
         });
       }
+      app.state.mediaPosts.slice(0, files.length).forEach((post) => callSupabase('syncMediaPost', post));
       app.state.mediaPosts = app.state.mediaPosts.slice(0, 50);
       setState(app.current, app.state);
       app.stateVersion += 1;
@@ -403,7 +416,10 @@ createApp({
       set.has(target) ? set.delete(target) : set.add(target);
       app.social[key][app.current] = [...set];
       setSocial(app.social);
+      const active = set.has(target);
       addEvent(type === 'follow' ? 'toggle-follow' : 'toggle-block', { from: app.current, to: target });
+      if (type === 'follow') callSupabase('syncFollow', app.current, target, active);
+      else callSupabase('syncBlock', app.current, target, active);
     }
     function isFollowing(user) {
       const arr = app.social.follows?.[app.current] || [];
@@ -422,6 +438,8 @@ createApp({
       setState(trip.user, ownerState);
       app.stateVersion += 1;
       addEvent('like-trip', { from: app.current, to: trip.user, tripId: trip.id });
+      callSupabase('syncTripLike', trip.id, app.current, idx < 0);
+      callSupabase('syncTrip', target);
     }
 
     function addComment(trip) {
@@ -437,6 +455,7 @@ createApp({
       app.stateVersion += 1;
       app.commentDraft[trip.id] = '';
       addEvent('comment-trip', { from: app.current, to: trip.user, tripId: trip.id });
+      callSupabase('syncTripComment', trip.id, target.comments[0]);
     }
 
     function toggleCommentLike(trip, comment) {
@@ -497,6 +516,7 @@ createApp({
       setState(diary.user, ownerState);
       app.stateVersion += 1;
       addEvent('like-diary', { from: app.current, to: diary.user, diaryId: diary.id });
+      callSupabase('syncMediaLike', diary.id, app.current, idx < 0);
     }
     function addDiaryComment(diary) {
       if (!ensureLogin() || !diary) return;
@@ -512,6 +532,7 @@ createApp({
       app.stateVersion += 1;
       app.commentDraft[diary.id] = '';
       addEvent('comment-diary', { from: app.current, to: diary.user, diaryId: diary.id });
+      callSupabase('syncMediaComment', diary.id, target.comments[0]);
     }
     function toggleDiaryCommentLike(diary, comment) {
       if (!ensureLogin() || !diary || !comment) return;
@@ -535,6 +556,60 @@ createApp({
         return list.sort((a, b) => (b.likes?.length || 0) - (a.likes?.length || 0) || new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
       }
       return list.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    }
+
+    function editTrip(trip) {
+      if (!ensureLogin() || !trip) return;
+      const destination = prompt('目的地', trip.destination || '');
+      if (destination === null) return;
+      const budget = prompt('预算', String(trip.budget || 0));
+      if (budget === null) return;
+      const itinerary = prompt('行程内容', trip.itinerary || '');
+      if (itinerary === null) return;
+      trip.destination = destination.trim() || trip.destination;
+      trip.budget = Number(budget || 0);
+      trip.itinerary = itinerary.trim() || trip.itinerary;
+      setState(app.current, app.state);
+      app.stateVersion += 1;
+      addEvent('edit-trip', { user: app.current, tripId: trip.id });
+      callSupabase('syncTrip', trip);
+    }
+
+    function deleteTrip(trip) {
+      if (!ensureLogin() || !trip) return;
+      if (!confirm('确认删除这个行程吗？')) return;
+      app.state.trips = (app.state.trips || []).filter((t) => t.id !== trip.id);
+      setState(app.current, app.state);
+      app.stateVersion += 1;
+      addEvent('delete-trip', { user: app.current, tripId: trip.id });
+      callSupabase('deleteTrip', trip.id);
+    }
+
+    function editDiary(diary) {
+      if (!ensureLogin() || !diary) return;
+      const caption = prompt('标题', diary.caption || '');
+      if (caption === null) return;
+      const location = prompt('地点', diary.location || '');
+      if (location === null) return;
+      const checkin = prompt('打卡文案', diary.checkin || '');
+      if (checkin === null) return;
+      diary.caption = caption.trim() || diary.caption;
+      diary.location = location.trim() || diary.location;
+      diary.checkin = checkin.trim() || diary.checkin;
+      setState(app.current, app.state);
+      app.stateVersion += 1;
+      addEvent('edit-diary', { user: app.current, diaryId: diary.id });
+      callSupabase('syncMediaPost', diary);
+    }
+
+    function deleteDiary(diary) {
+      if (!ensureLogin() || !diary) return;
+      if (!confirm('确认删除这个日记吗？')) return;
+      app.state.mediaPosts = (app.state.mediaPosts || []).filter((d) => d.id !== diary.id);
+      setState(app.current, app.state);
+      app.stateVersion += 1;
+      addEvent('delete-diary', { user: app.current, diaryId: diary.id });
+      callSupabase('deleteMediaPost', diary.id);
     }
 
     function openAccount(user, source = '') { app.selectedUser = user; app.fromSearch.account = source === 'search'; goto('account'); }
@@ -722,6 +797,10 @@ createApp({
       addDiaryComment,
       toggleDiaryCommentLike,
       sortedDiaryComments,
+      editTrip,
+      deleteTrip,
+      editDiary,
+      deleteDiary,
       openAccount,
       openTrip,
       openDiary,
@@ -935,7 +1014,11 @@ createApp({
             <div class="row" style="justify-content:space-between"><strong>{{tripItem.destination}}</strong><span class="meta">{{tripItem.departDate}} - {{tripItem.returnDate}}</span></div>
             <p class="hint">预算 ¥{{tripItem.budget}} ｜ 标签 {{(tripItem.tags||[]).join(' / ')}}</p>
             <p>{{tripItem.itinerary}}</p>
-            <div class="row" style="margin-top:6px"><button class="btn ghost" @click="openTrip(tripItem.id)">{{t('viewDetail')}}</button></div>
+            <div class="row" style="margin-top:6px">
+              <button class="btn ghost" @click="openTrip(tripItem.id)">{{t('viewDetail')}}</button>
+              <button class="btn ghost" @click="editTrip(tripItem)">编辑</button>
+              <button class="btn ghost" @click="deleteTrip(tripItem)">删除</button>
+            </div>
           </article>
         </section>
         <section class="card">
@@ -943,7 +1026,11 @@ createApp({
           <article class="trip" v-for="d in app.state.mediaPosts" :key="d.id">
             <div class="row" style="justify-content:space-between"><strong>{{d.caption}}</strong><span class="meta">{{d.location}} · {{fmt(d.createdAt)}}</span></div>
             <img :src="d.cover" style="width:100%;max-height:200px;object-fit:cover;border-radius:8px;border:1px solid var(--line);margin-top:6px" />
-            <div class="row" style="margin-top:6px"><button class="btn ghost" @click="openDiary(d.id)">{{t('viewDetail')}}</button></div>
+            <div class="row" style="margin-top:6px">
+              <button class="btn ghost" @click="openDiary(d.id)">{{t('viewDetail')}}</button>
+              <button class="btn ghost" @click="editDiary(d)">编辑</button>
+              <button class="btn ghost" @click="deleteDiary(d)">删除</button>
+            </div>
           </article>
         </section>
         <section class="card my-badge-side">

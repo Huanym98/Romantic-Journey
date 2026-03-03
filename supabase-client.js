@@ -209,6 +209,41 @@
     }
   }
 
+  async function syncMediaComment(mediaPostId, comment) {
+    if (!mediaPostId || !comment?.id) return;
+    const userId = await ensureUser(comment.user);
+    if (!userId) return;
+    await request('media_comments', {
+      method: 'POST',
+      body: JSON.stringify({
+        id: comment.id,
+        media_post_id: mediaPostId,
+        user_id: userId,
+        reply_to_nickname: comment.replyTo || null,
+        content: comment.text || '',
+        pinned: Boolean(comment.pinned),
+        created_at: comment.createdAt || new Date().toISOString()
+      }),
+      headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }
+    });
+  }
+
+  async function deleteTrip(tripId) {
+    if (!tripId) return;
+    await request(`trips?id=eq.${encodeURIComponent(tripId)}`, {
+      method: 'DELETE',
+      headers: { Prefer: 'return=minimal' }
+    });
+  }
+
+  async function deleteMediaPost(mediaPostId) {
+    if (!mediaPostId) return;
+    await request(`media_posts?id=eq.${encodeURIComponent(mediaPostId)}`, {
+      method: 'DELETE',
+      headers: { Prefer: 'return=minimal' }
+    });
+  }
+
   async function syncChat(chat, creatorNickname) {
     if (!chat?.id) return;
     const creatorId = await ensureUser(creatorNickname || chat.members?.[0]);
@@ -303,6 +338,9 @@
     syncTripComment,
     syncMediaPost,
     syncMediaLike,
+    syncMediaComment,
+    deleteTrip,
+    deleteMediaPost,
     syncChat,
     syncChatMessage,
     syncFollow,
