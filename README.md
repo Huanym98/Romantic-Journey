@@ -48,6 +48,16 @@ localStorage.setItem('romanticJourneyOpenAIKey', '<your-openai-key>');
 数据库结构建议直接使用：`sql/mvp_schema.sql`（已覆盖当前前端所有写入行为的表结构）。
 
 
+如果你之前建过旧表（比如 `trip_comments.id` 是 uuid、`trip_comment_likes.comment_id` 是 text），会出现外键类型冲突。可先执行：
+
+```sql
+drop table if exists trip_comment_likes;
+drop table if exists media_comment_likes;
+```
+
+再运行 `sql/mvp_schema.sql`。
+
+
 ## Vue 重构版（简约 UI）
 
 新增 Vue 单页版本：`vue-app.html`，覆盖注册/登录、资料编辑（含头像上传）、主页发布、搜索、账户主页、行程详情、日记九宫格详情、关注/拉黑、私聊、管理后台等核心流程，数据结构继续兼容现有 `localStorage` keys。

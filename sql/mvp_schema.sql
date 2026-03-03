@@ -1,9 +1,10 @@
 -- Romantic Journey MVP schema (Supabase/Postgres)
 -- Covers all writes emitted by current frontend + supabase-client.js
+-- Note: all business IDs use UUID to match FK constraints and avoid text/uuid mismatch.
 
 create extension if not exists pgcrypto;
 
--- 1) users
+-- ========= 1) 用户与画像 =========
 create table if not exists app_users (
   id uuid primary key default gen_random_uuid(),
   nickname text not null unique,
@@ -28,9 +29,9 @@ create table if not exists user_profiles (
   updated_at timestamptz not null default now()
 );
 
--- 2) trips
+-- ========= 2) 行程 =========
 create table if not exists trips (
-  id text primary key,
+  id uuid primary key,
   user_id uuid not null references app_users(id) on delete cascade,
   destination text not null,
   depart_date date,
@@ -54,8 +55,8 @@ create index if not exists idx_trips_user_id on trips(user_id);
 create index if not exists idx_trips_created_at on trips(created_at desc);
 
 create table if not exists trip_comments (
-  id text primary key,
-  trip_id text not null references trips(id) on delete cascade,
+  id uuid primary key,
+  trip_id uuid not null references trips(id) on delete cascade,
   user_id uuid not null references app_users(id) on delete cascade,
   reply_to_nickname text,
   content text not null,
@@ -65,22 +66,22 @@ create table if not exists trip_comments (
 create index if not exists idx_trip_comments_trip_id on trip_comments(trip_id);
 
 create table if not exists trip_likes (
-  trip_id text not null references trips(id) on delete cascade,
+  trip_id uuid not null references trips(id) on delete cascade,
   user_id uuid not null references app_users(id) on delete cascade,
   created_at timestamptz not null default now(),
   primary key (trip_id, user_id)
 );
 
 create table if not exists trip_comment_likes (
-  comment_id text not null references trip_comments(id) on delete cascade,
+  comment_id uuid not null references trip_comments(id) on delete cascade,
   user_id uuid not null references app_users(id) on delete cascade,
   created_at timestamptz not null default now(),
   primary key (comment_id, user_id)
 );
 
--- 3) diaries/media
+-- ========= 3) 日记/媒体 =========
 create table if not exists media_posts (
-  id text primary key,
+  id uuid primary key,
   user_id uuid not null references app_users(id) on delete cascade,
   media_type text not null check (media_type in ('图片','视频')),
   location text,
@@ -94,8 +95,8 @@ create table if not exists media_posts (
 create index if not exists idx_media_posts_user_id on media_posts(user_id);
 
 create table if not exists media_comments (
-  id text primary key,
-  media_post_id text not null references media_posts(id) on delete cascade,
+  id uuid primary key,
+  media_post_id uuid not null references media_posts(id) on delete cascade,
   user_id uuid not null references app_users(id) on delete cascade,
   reply_to_nickname text,
   content text not null,
@@ -105,20 +106,20 @@ create table if not exists media_comments (
 create index if not exists idx_media_comments_post_id on media_comments(media_post_id);
 
 create table if not exists media_likes (
-  media_post_id text not null references media_posts(id) on delete cascade,
+  media_post_id uuid not null references media_posts(id) on delete cascade,
   user_id uuid not null references app_users(id) on delete cascade,
   created_at timestamptz not null default now(),
   primary key (media_post_id, user_id)
 );
 
 create table if not exists media_comment_likes (
-  comment_id text not null references media_comments(id) on delete cascade,
+  comment_id uuid not null references media_comments(id) on delete cascade,
   user_id uuid not null references app_users(id) on delete cascade,
   created_at timestamptz not null default now(),
   primary key (comment_id, user_id)
 );
 
--- 4) social
+-- ========= 4) 社交关系 =========
 create table if not exists user_follows (
   follower_id uuid not null references app_users(id) on delete cascade,
   followee_id uuid not null references app_users(id) on delete cascade,
@@ -135,9 +136,9 @@ create table if not exists user_blocks (
   check (blocker_id <> blocked_id)
 );
 
--- 5) chat
+-- ========= 5) 聊天 =========
 create table if not exists chats (
-  id text primary key,
+  id uuid primary key,
   chat_type text not null check (chat_type in ('dm','group')),
   name text,
   created_by uuid references app_users(id) on delete set null,
@@ -145,21 +146,21 @@ create table if not exists chats (
 );
 
 create table if not exists chat_members (
-  chat_id text not null references chats(id) on delete cascade,
+  chat_id uuid not null references chats(id) on delete cascade,
   user_id uuid not null references app_users(id) on delete cascade,
   joined_at timestamptz not null default now(),
   primary key (chat_id, user_id)
 );
 
 create table if not exists chat_messages (
-  id text primary key,
-  chat_id text not null references chats(id) on delete cascade,
+  id uuid primary key,
+  chat_id uuid not null references chats(id) on delete cascade,
   sender_id uuid not null references app_users(id) on delete cascade,
   content text not null,
   created_at timestamptz not null default now()
 );
 
--- 6) read state + admin event stream
+-- ========= 6) 已读状态 / 管理事件 =========
 create table if not exists user_read_state (
   user_id uuid not null references app_users(id) on delete cascade,
   scope text not null,
@@ -177,7 +178,7 @@ create table if not exists admin_events (
 );
 create index if not exists idx_admin_events_type_created on admin_events(event_type, created_at desc);
 
--- 7) update timestamp trigger
+-- ========= 7) 更新时间触发器 =========
 create or replace function set_updated_at()
 returns trigger as $$
 begin
