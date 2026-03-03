@@ -19,6 +19,7 @@ const now = () => new Date().toISOString();
 const fmt = (t) => new Date(t || Date.now()).toLocaleString('zh-CN', { hour12: false });
 const list = (s) => String(s || '').split(',').map((x) => x.trim()).filter(Boolean);
 const toDataUrl = (file) => new Promise((resolve) => { const r = new FileReader(); r.onload = () => resolve(String(r.result || '')); r.readAsDataURL(file); });
+const toDataUrls = (files) => Promise.all(Array.from(files || []).filter((f) => f.type.startsWith('image/')).map((f) => toDataUrl(f)));
 
 const I18N = {
   'zh-CN': {
@@ -161,7 +162,12 @@ createApp({
       fromSearch: { account: false, trip: false, diary: false },
       showProfilePanel: false,
       supportCount: Number(localStorage.getItem(KEYS.SUPPORT) || 0),
-      feedback: { content: '', email: '' }
+      feedback: { content: '', email: '' },
+      tripEditMode: false,
+      diaryEditMode: false,
+      tripEditForm: { destination: '', departDate: '', returnDate: '', budget: 0, tags: '', spots: '', itinerary: '', pace: '平衡', wakeUp: '自然醒', social: '适中' },
+      diaryEditForm: { caption: '', location: '', checkin: '' },
+      diaryEditImages: []
     });
     const noticeState = reactive(getNoticeState());
 
@@ -558,21 +564,51 @@ createApp({
       return list.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
     }
 
-    function editTrip(trip) {
+    function startEditTrip(trip) {
       if (!ensureLogin() || !trip) return;
-      const destination = prompt('目的地', trip.destination || '');
-      if (destination === null) return;
-      const budget = prompt('预算', String(trip.budget || 0));
-      if (budget === null) return;
-      const itinerary = prompt('行程内容', trip.itinerary || '');
-      if (itinerary === null) return;
-      trip.destination = destination.trim() || trip.destination;
-      trip.budget = Number(budget || 0);
-      trip.itinerary = itinerary.trim() || trip.itinerary;
-      setState(app.current, app.state);
+      app.selectedTripId = trip.id;
+      app.tripEditForm = {
+        destination: trip.destination || '',
+        departDate: trip.departDate || '',
+        returnDate: trip.returnDate || '',
+        budget: Number(trip.budget || 0),
+        tags: Array.isArray(trip.tags) ? trip.tags.join(',') : '',
+        spots: Array.isArray(trip.spots) ? trip.spots.join(',') : '',
+        itinerary: trip.itinerary || '',
+        pace: trip.pace || '平衡',
+        wakeUp: trip.wakeUp || '自然醒',
+        social: trip.social || '适中'
+      };
+      app.tripEditMode = true;
+      goto('trip');
+    }
+
+    function saveTripEdit() {
+      if (!ensureLogin() || !app.selectedTripId) return;
+      const ownerState = getState(app.current);
+      const target = (ownerState.trips || []).find((t) => t.id === app.selectedTripId);
+      if (!target) return;
+      const f = app.tripEditForm;
+      target.destination = f.destination.trim();
+      target.departDate = f.departDate;
+      target.returnDate = f.returnDate;
+      target.budget = Number(f.budget || 0);
+      target.tags = list(f.tags);
+      target.spots = list(f.spots);
+      target.itinerary = f.itinerary;
+      target.pace = f.pace;
+      target.wakeUp = f.wakeUp;
+      target.social = f.social;
+      setState(app.current, ownerState);
+      app.state = ownerState;
       app.stateVersion += 1;
-      addEvent('edit-trip', { user: app.current, tripId: trip.id });
-      callSupabase('syncTrip', trip);
+      app.tripEditMode = false;
+      addEvent('edit-trip', { user: app.current, tripId: target.id });
+      callSupabase('syncTrip', target);
+    }
+
+    function cancelTripEdit() {
+      app.tripEditMode = false;
     }
 
     function deleteTrip(trip) {
@@ -581,35 +617,83 @@ createApp({
       app.state.trips = (app.state.trips || []).filter((t) => t.id !== trip.id);
       setState(app.current, app.state);
       app.stateVersion += 1;
+      app.tripEditMode = false;
       addEvent('delete-trip', { user: app.current, tripId: trip.id });
       callSupabase('deleteTrip', trip.id);
+      goto('my');
     }
 
-    function editDiary(diary) {
+    function startEditDiary(diary) {
       if (!ensureLogin() || !diary) return;
-      const caption = prompt('标题', diary.caption || '');
-      if (caption === null) return;
-      const location = prompt('地点', diary.location || '');
-      if (location === null) return;
-      const checkin = prompt('打卡文案', diary.checkin || '');
-      if (checkin === null) return;
-      diary.caption = caption.trim() || diary.caption;
-      diary.location = location.trim() || diary.location;
-      diary.checkin = checkin.trim() || diary.checkin;
-      setState(app.current, app.state);
-      app.stateVersion += 1;
-      addEvent('edit-diary', { user: app.current, diaryId: diary.id });
-      callSupabase('syncMediaPost', diary);
+      const ownerState = getState(app.current);
+      const rows = (ownerState.mediaPosts || []).filter((m) => (diary.batchId && m.batchId === diary.batchId) || m.id === diary.id);
+      const base = rows[0] || diary;
+      app.selectedDiaryId = diary.id;
+      app.diaryEditForm = {
+        caption: base.caption || '',
+        location: base.location || '',
+        checkin: base.checkin || ''
+      };
+      app.diaryEditImages = rows.map((m) => m.cover).filter(Boolean);
+      if (!app.diaryEditImages.length && base.cover) app.diaryEditImages = [base.cover];
+      app.diaryEditMode = true;
+      goto('diary');
     }
 
-    function deleteDiary(diary) {
-      if (!ensureLogin() || !diary) return;
-      if (!confirm('确认删除这个日记吗？')) return;
-      app.state.mediaPosts = (app.state.mediaPosts || []).filter((d) => d.id !== diary.id);
-      setState(app.current, app.state);
+    async function addDiaryImages(event) {
+      const urls = await toDataUrls(event?.target?.files || []);
+      if (!urls.length) return;
+      app.diaryEditImages.push(...urls);
+      event.target.value = '';
+    }
+
+    function removeDiaryImage(index) {
+      app.diaryEditImages.splice(index, 1);
+    }
+
+    function saveDiaryEdit() {
+      if (!ensureLogin() || !app.selectedDiaryId) return;
+      if (!app.diaryEditImages.length) {
+        alert('至少保留一张图片');
+        return;
+      }
+      const ownerState = getState(app.current);
+      ownerState.mediaPosts = Array.isArray(ownerState.mediaPosts) ? ownerState.mediaPosts : [];
+      const current = ownerState.mediaPosts.find((m) => m.id === app.selectedDiaryId);
+      if (!current) return;
+      const batchId = current.batchId || current.id;
+      const originalRows = ownerState.mediaPosts.filter((m) => (current.batchId && m.batchId === current.batchId) || m.id === current.id);
+      const deletedRows = originalRows.slice(app.diaryEditImages.length);
+      const shared = {
+        user: app.current,
+        type: current.type || '图片',
+        location: app.diaryEditForm.location,
+        checkin: app.diaryEditForm.checkin,
+        batchId,
+      };
+      for (let i = 0; i < app.diaryEditImages.length; i += 1) {
+        const caption = app.diaryEditImages.length > 1 ? `${app.diaryEditForm.caption} · ${i + 1}` : app.diaryEditForm.caption;
+        if (originalRows[i]) {
+          Object.assign(originalRows[i], shared, { caption, cover: app.diaryEditImages[i] });
+          callSupabase('syncMediaPost', originalRows[i]);
+        } else {
+          const newPost = { id: uid(), ...shared, caption, cover: app.diaryEditImages[i], createdAt: now(), likes: [], comments: [] };
+          ownerState.mediaPosts.unshift(newPost);
+          callSupabase('syncMediaPost', newPost);
+        }
+      }
+      const deleteIds = new Set(deletedRows.map((d) => d.id));
+      ownerState.mediaPosts = ownerState.mediaPosts.filter((m) => !deleteIds.has(m.id));
+      deletedRows.forEach((d) => callSupabase('deleteMediaPost', d.id));
+      setState(app.current, ownerState);
+      app.state = ownerState;
       app.stateVersion += 1;
-      addEvent('delete-diary', { user: app.current, diaryId: diary.id });
-      callSupabase('deleteMediaPost', diary.id);
+      app.diaryEditMode = false;
+      addEvent('edit-diary', { user: app.current, diaryId: current.id, imageCount: app.diaryEditImages.length });
+    }
+
+    function cancelDiaryEdit() {
+      app.diaryEditMode = false;
     }
 
     function openAccount(user, source = '') { app.selectedUser = user; app.fromSearch.account = source === 'search'; goto('account'); }
@@ -797,10 +881,15 @@ createApp({
       addDiaryComment,
       toggleDiaryCommentLike,
       sortedDiaryComments,
-      editTrip,
+      startEditTrip,
+      saveTripEdit,
+      cancelTripEdit,
       deleteTrip,
-      editDiary,
-      deleteDiary,
+      startEditDiary,
+      addDiaryImages,
+      removeDiaryImage,
+      saveDiaryEdit,
+      cancelDiaryEdit,
       openAccount,
       openTrip,
       openDiary,
@@ -1016,7 +1105,7 @@ createApp({
             <p>{{tripItem.itinerary}}</p>
             <div class="row" style="margin-top:6px">
               <button class="btn ghost" @click="openTrip(tripItem.id)">{{t('viewDetail')}}</button>
-              <button class="btn ghost" @click="editTrip(tripItem)">编辑</button>
+              <button class="btn ghost" @click="startEditTrip(tripItem)">编辑</button>
               <button class="btn ghost" @click="deleteTrip(tripItem)">删除</button>
             </div>
           </article>
@@ -1028,7 +1117,7 @@ createApp({
             <img :src="d.cover" style="width:100%;max-height:200px;object-fit:cover;border-radius:8px;border:1px solid var(--line);margin-top:6px" />
             <div class="row" style="margin-top:6px">
               <button class="btn ghost" @click="openDiary(d.id)">{{t('viewDetail')}}</button>
-              <button class="btn ghost" @click="editDiary(d)">编辑</button>
+              <button class="btn ghost" @click="startEditDiary(d)">编辑</button>
               <button class="btn ghost" @click="deleteDiary(d)">删除</button>
             </div>
           </article>
@@ -1101,12 +1190,34 @@ createApp({
 
       <template v-else-if="app.route==='trip'">
         <section class="card full" v-if="tripData">
+          <template v-if="app.tripEditMode && tripData.user===app.current">
+            <h2>编辑行程</h2>
+            <form class="grid" @submit.prevent="saveTripEdit">
+              <label>{{t('destination')}}<input v-model="app.tripEditForm.destination" required /></label>
+              <label>{{t('budgetYuan')}}<input v-model="app.tripEditForm.budget" type="number" required /></label>
+              <label>{{t('departDate')}}<input v-model="app.tripEditForm.departDate" type="date" required /></label>
+              <label>{{t('returnDate')}}<input v-model="app.tripEditForm.returnDate" type="date" required /></label>
+              <label class="full">{{t('tripTags')}}<input v-model="app.tripEditForm.tags" /></label>
+              <label class="full">{{t('spotsWant')}}<input v-model="app.tripEditForm.spots" /></label>
+              <label>节奏<select v-model="app.tripEditForm.pace"><option>特种兵式</option><option>平衡</option><option>慢游</option></select></label>
+              <label>作息<select v-model="app.tripEditForm.wakeUp"><option>早起</option><option>自然醒</option><option>夜猫</option></select></label>
+              <label>社交<select v-model="app.tripEditForm.social"><option>外向</option><option>适中</option><option>安静</option></select></label>
+              <label class="full">{{t('itinerary')}}<textarea v-model="app.tripEditForm.itinerary" required></textarea></label>
+              <div class="row full">
+                <button class="btn" type="submit">保存修改</button>
+                <button class="btn ghost" type="button" @click="cancelTripEdit">取消</button>
+                <button class="btn ghost" type="button" @click="deleteTrip(tripData)">删除行程</button>
+              </div>
+            </form>
+          </template>
+          <template v-else>
           <h2>{{tripData.destination}}</h2>
           <p class="hint">发布者：{{tripData.user}} ｜ {{fmt(tripData.createdAt)}} ｜ 点赞 {{tripData.likeCount||0}}</p>
           <p>{{tripData.itinerary}}</p>
           <p class="hint">景点：{{(tripData.spots||[]).join('、')}}</p>
           <div class="row">
             <button class="btn" :class="{liked:isTripLikedByMe(tripData)}" @click="likeTrip(tripData)">👍 {{tripData.likeCount||0}}</button>
+            <button v-if="tripData.user===app.current" class="btn ghost" @click="startEditTrip(tripData)">编辑</button>
           </div>
           <div class="trip-likers" v-if="tripLikers(tripData).length">
             <img v-for="name in tripLikers(tripData)" :key="tripData.id + '-' + name" class="avatar sm" :src="getUserAvatar(name)" :title="name" :alt="name" />
@@ -1144,11 +1255,36 @@ createApp({
             </article>
           </section>
           <button v-if="app.fromSearch.trip" class="btn ghost" @click="goto('search')">{{t('backSearch')}}</button>
+          </template>
         </section>
       </template>
 
       <template v-else-if="app.route==='diary'">
         <section class="card full" v-if="diaryData">
+          <template v-if="app.diaryEditMode && diaryData.user===app.current">
+            <h2>编辑日记</h2>
+            <form class="grid" @submit.prevent="saveDiaryEdit">
+              <label class="full">标题<input v-model="app.diaryEditForm.caption" required /></label>
+              <label>地点<input v-model="app.diaryEditForm.location" required /></label>
+              <label>打卡文本<input v-model="app.diaryEditForm.checkin" /></label>
+              <label class="full">追加图片<input type="file" accept="image/*" multiple @change="addDiaryImages" /></label>
+              <div class="full">
+                <p class="hint">已选择图片（可删除）</p>
+                <section class="diary-grid">
+                  <div v-for="(img,i) in app.diaryEditImages" :key="img + i" style="position:relative">
+                    <img :src="img" />
+                    <button type="button" class="btn ghost" style="position:absolute;top:4px;right:4px;padding:2px 6px" @click="removeDiaryImage(i)">×</button>
+                  </div>
+                </section>
+              </div>
+              <div class="row full">
+                <button class="btn" type="submit">保存修改</button>
+                <button class="btn ghost" type="button" @click="cancelDiaryEdit">取消</button>
+                <button class="btn ghost" type="button" @click="deleteDiary(diaryData)">删除日记</button>
+              </div>
+            </form>
+          </template>
+          <template v-else>
           <h2>{{diaryData.caption}}</h2>
           <p class="hint">{{diaryData.user}} · {{diaryData.location}} · {{diaryData.checkin}}</p>
           <section class="diary-grid">
@@ -1156,6 +1292,7 @@ createApp({
           </section>
           <div class="row" style="margin-top:8px">
             <button class="btn" :class="{liked:isDiaryLikedByMe(diaryData)}" @click="toggleDiaryLike(diaryData)">👍 {{diaryData.likes?.length || 0}}</button>
+            <button v-if="diaryData.user===app.current" class="btn ghost" @click="startEditDiary(diaryData)">编辑</button>
           </div>
           <div class="trip-likers" v-if="diaryLikers(diaryData).length">
             <img v-for="name in diaryLikers(diaryData)" :key="diaryData.id + '-' + name" class="avatar sm" :src="getUserAvatar(name)" :title="name" :alt="name" />
@@ -1193,6 +1330,7 @@ createApp({
             </article>
           </section>
           <button v-if="app.fromSearch.diary" class="btn ghost" @click="goto('search')" style="margin-top:8px">{{t('backSearch')}}</button>
+          </template>
         </section>
       </template>
 
