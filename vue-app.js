@@ -9,9 +9,9 @@ const KEYS = {
   SUPPORT: 'romanticJourneySupportCount',
   LANG: 'romanticJourneyLang',
   STATE_PREFIX: 'romanticJourneyState:',
-  OPENAI_KEY: 'romanticJourneyOpenAIKey',
-  OPENAI_MODEL: 'romanticJourneyOpenAIModel'
+  OPENAI_KEY: 'romanticJourneyOpenAIKey'
 };
+const AI_DEFAULT_MODEL = 'gpt-5.2';
 const defaultAvatar = 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=160&q=80';
 
 const read = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k) || 'null'); return v ?? d; } catch { return d; } };
@@ -171,8 +171,6 @@ createApp({
       diaryEditForm: { caption: '', location: '', checkin: '' },
       diaryEditImages: [],
       ai: {
-        apiKey: localStorage.getItem(KEYS.OPENAI_KEY) || '',
-        model: localStorage.getItem(KEYS.OPENAI_MODEL) || 'gpt-4o-mini',
         generating: false,
         error: ''
       }
@@ -197,9 +195,8 @@ createApp({
       });
     }
 
-    function persistAIConfig() {
-      localStorage.setItem(KEYS.OPENAI_KEY, app.ai.apiKey.trim());
-      localStorage.setItem(KEYS.OPENAI_MODEL, (app.ai.model || 'gpt-4o-mini').trim());
+    function resolveOpenAIKey() {
+      return String(window.RJ_OPENAI_API_KEY || localStorage.getItem(KEYS.OPENAI_KEY) || '').trim();
     }
 
     function extractJson(text) {
@@ -211,9 +208,9 @@ createApp({
 
     async function generateTripByAI() {
       if (!ensureLogin()) return;
-      const apiKey = app.ai.apiKey.trim();
+      const apiKey = resolveOpenAIKey();
       if (!apiKey) {
-        app.ai.error = '请先填写 OpenAI API Key（仅保存在本地浏览器）';
+        app.ai.error = 'AI Key 未配置，请由管理员在部署时设置 RJ_OPENAI_API_KEY 或 localStorage.romanticJourneyOpenAIKey';
         return;
       }
       if (!app.tripForm.destination.trim()) {
@@ -222,7 +219,6 @@ createApp({
       }
       app.ai.error = '';
       app.ai.generating = true;
-      persistAIConfig();
       const profile = app.state.profile || {};
       const payload = {
         destination: app.tripForm.destination,
@@ -251,7 +247,7 @@ createApp({
             Authorization: `Bearer ${apiKey}`
           },
           body: JSON.stringify({
-            model: app.ai.model || 'gpt-4o-mini',
+            model: AI_DEFAULT_MODEL,
             messages: [
               { role: 'system', content: '你是旅行规划助手，输出必须是合法 JSON。' },
               { role: 'user', content: prompt }
@@ -950,7 +946,6 @@ createApp({
       submitFeedback,
       postTrip,
       generateTripByAI,
-      persistAIConfig,
       postDiary,
       toggleRelation,
       isFollowing,
@@ -1106,14 +1101,8 @@ createApp({
             <label class="full">{{t('itinerary')}}
               <textarea v-model="app.tripForm.itinerary" placeholder="例如：D1 上午明洞，D2 弘大 citywalk" required></textarea>
             </label>
-            <label class="full">OpenAI API Key（仅本地保存）
-              <input v-model="app.ai.apiKey" type="password" placeholder="sk-..." @change="persistAIConfig" />
-            </label>
-            <label>AI模型
-              <input v-model="app.ai.model" placeholder="gpt-4o-mini" @change="persistAIConfig" />
-            </label>
             <div class="row" style="align-items:flex-end">
-              <button class="btn ghost" type="button" :disabled="app.ai.generating" @click="generateTripByAI">{{app.ai.generating ? 'AI 生成中...' : '🤖 AI自动生成行程'}}</button>
+              <button class="btn ghost" type="button" :disabled="app.ai.generating" @click="generateTripByAI">{{app.ai.generating ? 'AI 生成中...' : '🤖 AI自动生成行程（GPT-5.2）'}}</button>
             </div>
             <p class="hint full" v-if="app.ai.error" style="color:#b91c1c">{{app.ai.error}}</p>
             <button class="btn full">{{t('publish')}}</button>
