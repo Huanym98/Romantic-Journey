@@ -8,7 +8,9 @@ const KEYS = {
   NOTICE: 'romanticJourneyNoticeState',
   SUPPORT: 'romanticJourneySupportCount',
   LANG: 'romanticJourneyLang',
-  STATE_PREFIX: 'romanticJourneyState:'
+  STATE_PREFIX: 'romanticJourneyState:',
+  OPENAI_KEY: 'romanticJourneyOpenAIKey',
+  OPENAI_MODEL: 'romanticJourneyOpenAIModel'
 };
 const defaultAvatar = 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=160&q=80';
 
@@ -167,7 +169,13 @@ createApp({
       diaryEditMode: false,
       tripEditForm: { destination: '', departDate: '', returnDate: '', budget: 0, tags: '', spots: '', itinerary: '', pace: '平衡', wakeUp: '自然醒', social: '适中' },
       diaryEditForm: { caption: '', location: '', checkin: '' },
-      diaryEditImages: []
+      diaryEditImages: [],
+      ai: {
+        apiKey: localStorage.getItem(KEYS.OPENAI_KEY) || '',
+        model: localStorage.getItem(KEYS.OPENAI_MODEL) || 'gpt-4o-mini',
+        generating: false,
+        error: ''
+      }
     });
     const noticeState = reactive(getNoticeState());
 
@@ -187,6 +195,83 @@ createApp({
       Promise.resolve(client[method](...args)).catch((err) => {
         console.warn(`[RJSupabase.${method}]`, err?.message || err);
       });
+    }
+
+    function persistAIConfig() {
+      localStorage.setItem(KEYS.OPENAI_KEY, app.ai.apiKey.trim());
+      localStorage.setItem(KEYS.OPENAI_MODEL, (app.ai.model || 'gpt-4o-mini').trim());
+    }
+
+    function extractJson(text) {
+      const raw = String(text || '').trim();
+      const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+      const source = fenced ? fenced[1] : raw;
+      return JSON.parse(source);
+    }
+
+    async function generateTripByAI() {
+      if (!ensureLogin()) return;
+      const apiKey = app.ai.apiKey.trim();
+      if (!apiKey) {
+        app.ai.error = '请先填写 OpenAI API Key（仅保存在本地浏览器）';
+        return;
+      }
+      if (!app.tripForm.destination.trim()) {
+        app.ai.error = '请先填写目的地';
+        return;
+      }
+      app.ai.error = '';
+      app.ai.generating = true;
+      persistAIConfig();
+      const profile = app.state.profile || {};
+      const payload = {
+        destination: app.tripForm.destination,
+        budget: Number(app.tripForm.budget || 0),
+        departDate: app.tripForm.departDate,
+        returnDate: app.tripForm.returnDate,
+        tags: list(app.tripForm.tags),
+        spots: list(app.tripForm.spots),
+        userPreference: {
+          bio: profile.bio || '',
+          mbti: profile.mbti || '',
+          zodiac: profile.zodiac || '',
+          pace: profile.pace || app.tripForm.pace,
+          budgetLevel: profile.budgetLevel || '',
+          wakeUp: profile.wakeUp || app.tripForm.wakeUp,
+          social: profile.social || app.tripForm.social,
+          skills: Array.isArray(profile.skills) ? profile.skills : []
+        }
+      };
+      const prompt = `请基于以下信息生成中文旅行计划，并严格返回 JSON（不要额外解释）。字段要求：{"itinerary":"字符串","tags":["标签"],"spots":["景点"],"budget":数字}。输入：${JSON.stringify(payload)}`;
+      try {
+        const res = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            model: app.ai.model || 'gpt-4o-mini',
+            messages: [
+              { role: 'system', content: '你是旅行规划助手，输出必须是合法 JSON。' },
+              { role: 'user', content: prompt }
+            ],
+            temperature: 0.7
+          })
+        });
+        if (!res.ok) throw new Error(`AI请求失败: ${res.status}`);
+        const data = await res.json();
+        const content = data?.choices?.[0]?.message?.content || '';
+        const parsed = extractJson(content);
+        if (parsed.itinerary) app.tripForm.itinerary = String(parsed.itinerary);
+        if (Array.isArray(parsed.tags) && parsed.tags.length) app.tripForm.tags = parsed.tags.join(',');
+        if (Array.isArray(parsed.spots) && parsed.spots.length) app.tripForm.spots = parsed.spots.join(',');
+        if (Number.isFinite(Number(parsed.budget)) && Number(parsed.budget) > 0) app.tripForm.budget = Number(parsed.budget);
+      } catch (err) {
+        app.ai.error = err?.message || 'AI生成失败';
+      } finally {
+        app.ai.generating = false;
+      }
     }
 
     function goto(route) {
@@ -864,6 +949,8 @@ createApp({
       supportLike,
       submitFeedback,
       postTrip,
+      generateTripByAI,
+      persistAIConfig,
       postDiary,
       toggleRelation,
       isFollowing,
@@ -1019,6 +1106,16 @@ createApp({
             <label class="full">{{t('itinerary')}}
               <textarea v-model="app.tripForm.itinerary" placeholder="例如：D1 上午明洞，D2 弘大 citywalk" required></textarea>
             </label>
+            <label class="full">OpenAI API Key（仅本地保存）
+              <input v-model="app.ai.apiKey" type="password" placeholder="sk-..." @change="persistAIConfig" />
+            </label>
+            <label>AI模型
+              <input v-model="app.ai.model" placeholder="gpt-4o-mini" @change="persistAIConfig" />
+            </label>
+            <div class="row" style="align-items:flex-end">
+              <button class="btn ghost" type="button" :disabled="app.ai.generating" @click="generateTripByAI">{{app.ai.generating ? 'AI 生成中...' : '🤖 AI自动生成行程'}}</button>
+            </div>
+            <p class="hint full" v-if="app.ai.error" style="color:#b91c1c">{{app.ai.error}}</p>
             <button class="btn full">{{t('publish')}}</button>
           </form>
         </section>
