@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Romantic Journey · 行程详情</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="topbar-inner">
+        <div class="brand"><img src="assets/logo.svg" alt="浪漫之旅 Logo" /></div>
+        <nav class="nav-links">
+          <a href="index.html">首页</a>
+          <a href="index.html">行程广场</a>
+          <a href="index.html">旅行社区</a>
+          <a href="my-home.html">我的主页</a>
+          <a href="search.html" class="nav-search-link"><span class="search-icon" aria-hidden="true"></span><span class="sr-only">查询</span></a>
+          <a href="admin.html" class="ghost">管理后台</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="layout" style="max-width:1000px;margin:1rem auto 2rem;padding:0 1rem;">
+      <section class="card" id="tripCard"></section>
+    </main>
+
+
+
+    <dialog id="personDialog" class="person-dialog">
+      <div class="panel-head">
+        <h3>个人信息</h3>
+        <button id="personDialogClose" class="ghost" type="button">关闭</button>
+      </div>
+      <div class="person-hero">
+        <img id="personAvatar" class="person-avatar" alt="用户头像" />
+        <div>
+          <p id="personMeta" class="meta"></p>
+          <p id="personRelation" class="relationship"></p>
+        </div>
+      </div>
+      <p id="personSkills" class="hint"></p>
+      <div class="person-actions">
+        <button id="personHomeBtn" class="secondary" type="button">查看主页</button>
+      </div>
+    </dialog>
+
+    <script src="trip-detail.js"></script>
+  </body>
+</html>
