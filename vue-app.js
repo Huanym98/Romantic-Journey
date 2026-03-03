@@ -280,7 +280,6 @@ createApp({
     function goto(route) {
       app.route = route;
       location.hash = `/${route}`;
-      if (route === 'messages') markAllAsRead();
     }
     function ensureLogin() { if (!app.current) { goto('register'); return false; } return true; }
     function refreshMine() {
@@ -1079,13 +1078,16 @@ createApp({
       </div>
     </aside>
 
-    <section v-if="app.route==='register'" class="auth card">
-      <h2>{{t('loginTitle')}}</h2>
-      <p class="hint">{{t('loginHint')}}</p>
-      <div class="grid">
-        <input v-model="app.auth.nickname" :placeholder="t('nickname')" />
-        <input v-model="app.auth.password" type="password" :placeholder="t('password')" />
-        <button class="btn full" @click="loginOrRegister">{{t('continue')}}</button>
+    <section v-if="app.route==='register'" class="auth auth-hero">
+      <div class="auth-media" role="img" aria-label="travel scenery"></div>
+      <div class="card auth-panel">
+        <h2>{{t('loginTitle')}}</h2>
+        <p class="hint">{{t('loginHint')}}</p>
+        <div class="grid">
+          <input v-model="app.auth.nickname" :placeholder="t('nickname')" />
+          <input v-model="app.auth.password" type="password" :placeholder="t('password')" />
+          <button class="btn full" @click="loginOrRegister">{{t('continue')}}</button>
+        </div>
       </div>
     </section>
 
@@ -1155,10 +1157,6 @@ createApp({
             <div class="trip-likers" v-if="tripLikers(trip).length">
               <img v-for="name in tripLikers(trip)" :key="trip.id + '-' + name" class="avatar sm" :src="getUserAvatar(name)" :title="name" :alt="name" />
               <span class="hint" v-if="tripLikeOverflow(trip)">+{{tripLikeOverflow(trip)}}</span>
-            </div>
-            <div class="row" style="margin-top:6px">
-              <input v-model="app.commentDraft[trip.id]" placeholder="评论一下" style="flex:1" @click.stop/>
-              <button class="btn ghost" @click.stop="addComment(trip)">发送</button>
             </div>
           </article>
         </section>
@@ -1454,20 +1452,13 @@ createApp({
       <template v-else-if="app.route==='messages'">
         <section class="card full">
           <div class="row" style="justify-content:space-between"><h2>{{t('messageCenter')}}</h2><button class="btn ghost" @click="markAllAsRead">{{t('markRead')}}</button></div>
-          <div class="row" style="margin-bottom:.4rem">
-            <button class="btn ghost" @click="app.activeMsgTab='chats'">{{t('chatMsg')}}<span v-if="unreadChatCount" class="msg-badge">{{unreadChatCount}}</span></button>
-            <button class="btn ghost" @click="app.activeMsgTab='system'">{{t('sysMsg')}}<span v-if="unreadSystemCount" class="msg-badge">{{unreadSystemCount}}</span></button>
-          </div>
-          <div v-if="app.activeMsgTab==='chats'">
+          <div>
             <article class="trip trip-clickable" v-for="c in chatPreviews" :key="c.id" @click="openChat(c.peer)">
-              <div class="row" style="justify-content:space-between"><strong>{{c.peer}}</strong><span class="meta">{{fmt(c.last?.createdAt)}}</span></div>
+              <div class="row" style="justify-content:space-between"><strong>💬 {{c.peer}}</strong><span class="meta">{{fmt(c.last?.createdAt)}}</span></div>
               <p class="hint">{{c.last?.text || '暂无内容'}} <span v-if="c.unread">· 未读 {{c.unread}}</span></p>
             </article>
-            <p class="hint" v-if="!chatPreviews.length">{{t('noChatMsg')}}</p>
-          </div>
-          <div v-else>
-            <article class="trip" v-for="m in systemMessages" :key="m.id"><strong>系统提醒</strong><p>{{m.text}}</p><p class="meta">{{fmt(m.createdAt)}}</p></article>
-            <p class="hint" v-if="!systemMessages.length">{{t('noSysMsg')}}</p>
+            <article class="trip" v-for="m in systemMessages" :key="m.id"><strong>🔔 系统提醒</strong><p>{{m.text}}</p><p class="meta">{{fmt(m.createdAt)}}</p></article>
+            <p class="hint" v-if="!chatPreviews.length && !systemMessages.length">{{t('noMessage')}}</p>
           </div>
         </section>
       </template>
