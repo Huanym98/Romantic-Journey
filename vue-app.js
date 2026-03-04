@@ -1147,7 +1147,7 @@ createApp({
             <button class="btn full" :disabled="app.ai.generating">{{t('publish')}}</button>
           </form>
         </section>
-        <aside class="card">
+        <aside class="card home-message-aside">
           <h3>{{t('messagePreview')}}</h3>
           <p class="hint" v-if="!chatPreviews.length && !systemMessages.length">{{t('noMessage')}}</p>
           <div class="message-preview-list" v-if="chatPreviews.length || systemMessages.length">
@@ -1162,8 +1162,9 @@ createApp({
           <article class="trip trip-clickable" v-for="trip in homeTrips" :key="trip.id" @click="openTrip(trip.id)">
             <div class="row" style="justify-content:space-between">
               <div class="row">
-                <img class="avatar" :src="trip.avatar || '${defaultAvatar}'" alt="avatar" @click.stop="openAccount(trip.user)" />
-                <strong>{{trip.user}} · {{trip.destination}}</strong>
+                <img class="avatar avatar-clickable" :src="trip.avatar || '${defaultAvatar}'" alt="avatar" @click.stop="openAccount(trip.user)" />
+                <button class="user-link" type="button" @click.stop="openAccount(trip.user)">{{trip.user}}</button>
+                <strong>· {{trip.destination}}</strong>
                 <button v-if="trip.user !== app.current" class="btn ghost" @click.stop="toggleRelation('follow', trip.user)">{{isFollowing(trip.user)?'取消关注':'关注'}}</button>
               </div>
               <span class="meta">{{fmt(trip.createdAt)}}</span>
