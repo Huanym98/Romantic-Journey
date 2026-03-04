@@ -65,7 +65,7 @@ dialog{border:none;border-radius:12px;padding:12px;max-width:min(900px,95vw)}dia
 .user-link:hover{text-decoration:underline}
 .inline-link{border:none;background:transparent;color:#0f172a;font-weight:700;cursor:pointer;padding:0 2px}
 .inline-link:hover{text-decoration:underline}
-.msg-badge{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 .3rem;border-radius:999px;background:#111827;color:#fff;font-size:.72rem;line-height:1;margin-left:.3rem}
+.msg-badge{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 .3rem;border-radius:999px;background:#ef4444;color:#fff;font-size:.72rem;line-height:1;margin-left:.3rem;font-weight:700;box-shadow:0 0 0 1px rgba(255,255,255,.25)}
 .chat-page{min-height:72vh;display:flex;flex-direction:column}
 .chat-history{flex:1;min-height:420px;max-height:calc(72vh - 110px);overflow:auto}
 .chat-input-row{position:sticky;bottom:0;background:rgba(248,250,252,.95);padding-top:.35rem}

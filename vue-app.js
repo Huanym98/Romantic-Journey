@@ -27,7 +27,7 @@ const I18N = {
   'zh-CN': {
     appName: 'Romantic Journey', navHome: '首页', navMy: '我的主页', navMsg: '消息', navSearch: '查询', navAdmin: '后台',
     logout: '退出', notLogin: '未登录', profile: '个人资料', close: '关闭', saveProfile: '保存资料',
-    loginTitle: '浪漫之旅 Romantic Journey', loginHint: '请输入账户名与密码登录。', nickname: '账户名', password: '密码', loginBtn: '登录', registerBtn: '注册',
+    loginTitle: '浪漫之旅 Romantic Journey', loginHint: '请输入账户名与密码，系统将自动登录或注册。', nickname: '账户名', password: '密码', loginBtn: '登录 / 注册', registerBtn: '注册',
     publishTrip: '发布行程', destination: '目的地', budgetYuan: '预算（元）', departDate: '出发日期', returnDate: '返程日期',
     tripTags: '行程标签（逗号分隔）', spotsWant: '想去景点（逗号分隔）', itinerary: '详细行程', publish: '发布',
     messagePreview: '消息预览', noMessage: '暂无消息', viewAllMessages: '查看全部消息',
@@ -42,7 +42,7 @@ const I18N = {
   },
   en: {
     appName: 'Romantic Journey', navHome: 'Home', navMy: 'My Home', navMsg: 'Messages', navSearch: 'Search', navAdmin: 'Admin', logout: 'Logout', notLogin: 'Guest',
-    profile: 'Profile', close: 'Close', saveProfile: 'Save Profile', loginTitle: 'Romantic Journey', loginHint: 'Please choose login or register manually.', nickname: 'Nickname', password: 'Password', loginBtn: 'Login', registerBtn: 'Register',
+    profile: 'Profile', close: 'Close', saveProfile: 'Save Profile', loginTitle: 'Romantic Journey', loginHint: 'Enter account and password, system will auto login/register.', nickname: 'Nickname', password: 'Password', loginBtn: 'Login / Register', registerBtn: 'Register',
     publishTrip: 'Publish Trip', destination: 'Destination', budgetYuan: 'Budget (CNY)', departDate: 'Departure', returnDate: 'Return', tripTags: 'Tags (comma-separated)', spotsWant: 'Spots (comma-separated)', itinerary: 'Itinerary', publish: 'Publish',
     messagePreview: 'Message Preview', noMessage: 'No messages', viewAllMessages: 'View all messages', tripSquare: 'Trip Square', searchAll: 'Search user/destination',
     myTrips: 'My Trips', noTripYet: 'No trips yet', viewDetail: 'View', myDiaries: 'My Diaries', myBadges: 'My Badges',
@@ -54,7 +54,7 @@ const I18N = {
   },
   ko: {
     appName: 'Romantic Journey', navHome: '홈', navMy: '내 홈', navMsg: '메시지', navSearch: '검색', navAdmin: '관리', logout: '로그아웃', notLogin: '게스트',
-    profile: '프로필', close: '닫기', saveProfile: '저장', loginTitle: 'Romantic Journey', loginHint: '로그인 또는 회원가입을 직접 선택하세요.', nickname: '닉네임', password: '비밀번호', loginBtn: '로그인', registerBtn: '회원가입',
+    profile: '프로필', close: '닫기', saveProfile: '저장', loginTitle: 'Romantic Journey', loginHint: '계정/비밀번호 입력 시 자동으로 로그인 또는 회원가입됩니다.', nickname: '닉네임', password: '비밀번호', loginBtn: '로그인 / 가입', registerBtn: '회원가입',
     publishTrip: '여행 등록', destination: '목적지', budgetYuan: '예산', departDate: '출발일', returnDate: '복귀일', tripTags: '태그(쉼표)', spotsWant: '가고 싶은 곳(쉼표)', itinerary: '일정', publish: '등록',
     messagePreview: '메시지 미리보기', noMessage: '메시지 없음', viewAllMessages: '전체 메시지', tripSquare: '여행 광장', searchAll: '사용자/목적지 검색',
     myTrips: '내 여행', noTripYet: '등록한 여행이 없습니다', viewDetail: '상세보기', myDiaries: '내 다이어리', myBadges: '내 배지',
@@ -66,7 +66,7 @@ const I18N = {
   },
   ja: {
     appName: 'Romantic Journey', navHome: 'ホーム', navMy: 'マイページ', navMsg: 'メッセージ', navSearch: '検索', navAdmin: '管理', logout: 'ログアウト', notLogin: 'ゲスト',
-    profile: 'プロフィール', close: '閉じる', saveProfile: '保存', loginTitle: 'Romantic Journey', loginHint: 'ログインか登録を手動で選択してください。', nickname: 'ニックネーム', password: 'パスワード', loginBtn: 'ログイン', registerBtn: '登録',
+    profile: 'プロフィール', close: '閉じる', saveProfile: '保存', loginTitle: 'Romantic Journey', loginHint: 'アカウントとパスワード入力で自動ログイン/登録します。', nickname: 'ニックネーム', password: 'パスワード', loginBtn: 'ログイン / 登録', registerBtn: '登録',
     publishTrip: '旅程を投稿', destination: '目的地', budgetYuan: '予算', departDate: '出発日', returnDate: '帰着日', tripTags: 'タグ（カンマ）', spotsWant: '行きたい場所（カンマ）', itinerary: '詳細日程', publish: '投稿',
     messagePreview: 'メッセージプレビュー', noMessage: 'メッセージなし', viewAllMessages: 'すべて表示', tripSquare: '旅程広場', searchAll: 'ユーザー/目的地を検索',
     myTrips: '自分の旅程', noTripYet: 'まだ旅程がありません', viewDetail: '詳細を見る', myDiaries: '自分の日記', myBadges: '自分のバッジ',
@@ -78,7 +78,7 @@ const I18N = {
   },
   fr: {
     appName: 'Romantic Journey', navHome: 'Accueil', navMy: 'Mon espace', navMsg: 'Messages', navSearch: 'Recherche', navAdmin: 'Admin', logout: 'Déconnexion', notLogin: 'Invité',
-    profile: 'Profil', close: 'Fermer', saveProfile: 'Enregistrer', loginTitle: 'Romantic Journey', loginHint: 'Choisissez manuellement connexion ou inscription.', nickname: 'Pseudo', password: 'Mot de passe', loginBtn: 'Connexion', registerBtn: 'Inscription',
+    profile: 'Profil', close: 'Fermer', saveProfile: 'Enregistrer', loginTitle: 'Romantic Journey', loginHint: 'Entrez compte et mot de passe, connexion/inscription auto.', nickname: 'Pseudo', password: 'Mot de passe', loginBtn: 'Connexion / Inscription', registerBtn: 'Inscription',
     publishTrip: 'Publier un voyage', destination: 'Destination', budgetYuan: 'Budget', departDate: 'Départ', returnDate: 'Retour', tripTags: 'Tags (virgule)', spotsWant: 'Lieux souhaités (virgule)', itinerary: 'Itinéraire', publish: 'Publier',
     messagePreview: 'Aperçu des messages', noMessage: 'Aucun message', viewAllMessages: 'Voir tous les messages', tripSquare: 'Place des voyages', searchAll: 'Rechercher utilisateur/destination',
     myTrips: 'Mes voyages', noTripYet: 'Aucun voyage publié', viewDetail: 'Voir détail', myDiaries: 'Mes journaux', myBadges: 'Mes badges',
@@ -157,6 +157,7 @@ createApp({
       social: getSocial(),
       state: normalizeState({}),
       auth: { nickname: '', password: '' },
+      authError: '',
       profileForm: { birthday: '', mbti: '', zodiac: '', pace: '平衡', budgetLevel: '舒适', wakeUp: '自然醒', social: '适中', bio: '', skillsText: '' },
       tripForm: { destination: '', departDate: '', returnDate: '', budget: 2000, tags: '', spots: '', itinerary: '', pace: '平衡', wakeUp: '自然醒', social: '适中' },
       mediaForm: { location: '', caption: '', checkin: '' },
@@ -165,6 +166,7 @@ createApp({
       selectedUser: '',
       selectedTripId: '',
       selectedDiaryId: '',
+      selectedChatId: '',
       previewSrc: '',
       chatPeer: '',
       chatDraft: '',
@@ -178,6 +180,7 @@ createApp({
       supportCount: Number(localStorage.getItem(KEYS.SUPPORT) || 0),
       feedback: { content: '', email: '' },
       followDialog: { show: false, title: '', users: [] },
+      groupDialog: { show: false, members: [] },
       tripEditMode: false,
       diaryEditMode: false,
       tripEditForm: { destination: '', departDate: '', returnDate: '', budget: 0, tags: '', spots: '', itinerary: '', pace: '平衡', wakeUp: '自然醒', social: '适中' },
@@ -366,18 +369,35 @@ createApp({
       saveUsers(app.users);
     }
 
+    function isStrongPassword(password) {
+      const text = String(password || '');
+      return text.length >= 8 && /[A-Z]/.test(text) && /[a-z]/.test(text) && /\d/.test(text) && /[^A-Za-z0-9]/.test(text);
+    }
+
     function login() {
       const nickname = app.auth.nickname.trim();
       const password = app.auth.password;
-      if (!nickname || !password) return;
-      const found = app.users.find((u) => u.nickname === nickname);
-      if (!found) {
-        alert('用户不存在，请先注册');
+      app.authError = '';
+      if (!nickname || !password) {
+        app.authError = '请输入账户名与密码';
         return;
       }
-      if ((found.password || '') !== password) {
-        alert('密码错误');
+      if (!isStrongPassword(password)) {
+        app.authError = '密码太简单：至少8位，且包含大小写字母、数字和特殊符号';
         return;
+      }
+      const found = app.users.find((u) => u.nickname === nickname);
+      if (found) {
+        if ((found.password || '') !== password) {
+          app.authError = '密码错误';
+          return;
+        }
+      } else {
+        const user = { nickname, password, firstLogin: true };
+        app.users.push(user);
+        saveUsers(app.users);
+        addEvent('register', { user: nickname });
+        callSupabase('ensureUser', nickname, password);
       }
       localStorage.setItem(KEYS.CURRENT, nickname);
       app.current = nickname;
@@ -385,31 +405,14 @@ createApp({
       goto('home');
     }
 
-    function register() {
-      const nickname = app.auth.nickname.trim();
-      const password = app.auth.password;
-      if (!nickname || !password) return;
-      const found = app.users.find((u) => u.nickname === nickname);
-      if (found) {
-        alert('用户已存在，请直接登录');
-        return;
-      }
-      const user = { nickname, password, firstLogin: true };
-      app.users.push(user);
-      saveUsers(app.users);
-      addEvent('register', { user: nickname });
-      localStorage.setItem(KEYS.CURRENT, nickname);
-      app.current = nickname;
-      refreshMine();
-      callSupabase('ensureUser', nickname, password);
-      goto('home');
-    }
+    function register() { login(); }
 
     function logout() {
       localStorage.removeItem(KEYS.CURRENT);
       app.current = '';
       app.showProfilePanel = false;
       app.auth = { nickname: '', password: '' };
+      app.authError = '';
       goto('register');
     }
 
@@ -816,7 +819,12 @@ createApp({
     function openAccount(user, source = '') { app.selectedUser = user; app.fromSearch.account = source === 'search'; goto('account'); }
     function openTrip(id, source = '') { app.selectedTripId = id; app.fromSearch.trip = source === 'search'; goto('trip'); }
     function openDiary(id, source = '') { app.selectedDiaryId = id; app.fromSearch.diary = source === 'search'; goto('diary'); }
-    function openChat(user) { app.chatPeer = user; goto('chat'); }
+    function openChat(user, chatId = '') {
+      if (!user || user === app.current) return;
+      app.chatPeer = user;
+      app.selectedChatId = chatId || '';
+      goto('chat');
+    }
     function getUserAvatar(user) {
       return (stateByUser.value[user]?.profile?.avatar) || defaultAvatar;
     }
@@ -834,6 +842,10 @@ createApp({
 
     function ensureChat() {
       if (!ensureLogin() || !app.chatPeer) return null;
+      if (app.selectedChatId) {
+        const selected = app.social.chats.find((c) => c.id === app.selectedChatId);
+        if (selected) return selected;
+      }
       const members = [app.current, app.chatPeer].sort();
       let chat = app.social.chats.find((c) => Array.isArray(c.members) && c.members.length === 2 && c.members.slice().sort().join('|') === members.join('|'));
       if (!chat) {
@@ -857,6 +869,45 @@ createApp({
       addEvent('send-chat', { from: app.current, to: app.chatPeer, chatId: chat.id, messageId: message.id });
       callSupabase('syncChatMessage', chat.id, app.current, text, message.createdAt, message.id);
     }
+
+    function isMutualFollow(user) {
+      if (!app.current || !user || user === app.current) return false;
+      const mine = app.social.follows?.[app.current] || [];
+      const theirs = app.social.follows?.[user] || [];
+      return mine.includes(user) && theirs.includes(app.current);
+    }
+
+    const mutualFollowUsers = computed(() => {
+      return app.users
+        .map((u) => u.nickname)
+        .filter((name) => isMutualFollow(name));
+    });
+
+    function toggleGroupMember(user) {
+      if (!user) return;
+      const idx = app.groupDialog.members.indexOf(user);
+      if (idx >= 0) app.groupDialog.members.splice(idx, 1);
+      else app.groupDialog.members.push(user);
+    }
+
+    function createGroupChat() {
+      const selected = [...app.groupDialog.members];
+      if (!selected.length) return;
+      const members = [app.current, ...selected].sort();
+      const key = members.join('|');
+      let chat = app.social.chats.find((c) => Array.isArray(c.members) && c.members.slice().sort().join('|') === key);
+      if (!chat) {
+        chat = { id: uid(), members, name: `群聊(${selected.length + 1})`, messages: [] };
+        app.social.chats.unshift(chat);
+        setSocial(app.social);
+        callSupabase('syncChat', chat, app.current);
+      }
+      app.groupDialog.show = false;
+      app.groupDialog.members = [];
+      app.chatPeer = chat.name || '群聊';
+      app.selectedChatId = chat.id;
+      goto('chat');
+    }
     function markAllAsRead() {
       const stamp = now();
       app.social.chats.forEach((c) => { noticeState.chatReadAt[c.id] = stamp; });
@@ -870,6 +921,12 @@ createApp({
       if (!user) return null;
       const s = stateByUser.value[user] || getState(user);
       return { user, ...s };
+    });
+    const isSelfAccount = computed(() => Boolean(accountData.value?.user && accountData.value.user === app.current));
+    const isFollowingAccount = computed(() => {
+      const target = accountData.value?.user;
+      if (!target || target === app.current) return false;
+      return isFollowing(target);
     });
     const tripData = computed(() => allTrips.value.find((t) => t.id === app.selectedTripId) || null);
     const diaryData = computed(() => {
@@ -911,12 +968,13 @@ createApp({
       return (app.social.chats || [])
         .filter((c) => Array.isArray(c.members) && c.members.includes(app.current))
         .map((c) => {
-          const peer = c.members.find((m) => m !== app.current) || '群聊';
+          const isGroup = c.members.length > 2;
+          const peer = isGroup ? (c.name || `群聊(${c.members.length})`) : (c.members.find((m) => m !== app.current) || '群聊');
           const messages = Array.isArray(c.messages) ? c.messages : [];
           const last = messages[messages.length - 1] || null;
           const readAt = new Date(noticeState.chatReadAt[c.id] || 0).getTime();
           const unread = messages.filter((m) => m.from !== app.current && new Date(m.createdAt || 0).getTime() > readAt).length;
-          return { id: c.id, peer, last, unread };
+          return { id: c.id, peer, last, unread, isGroup };
         })
         .sort((a, b) => new Date(b.last?.createdAt || 0) - new Date(a.last?.createdAt || 0));
     });
@@ -1068,6 +1126,12 @@ createApp({
       openFollowList,
       closeFollowList,
       goAccountFromList,
+      isSelfAccount,
+      isFollowingAccount,
+      mutualFollowUsers,
+      toggleGroupMember,
+      createGroupChat,
+      isMutualFollow,
       chatPreviews,
       systemMessages,
       unreadChatCount,
@@ -1141,6 +1205,7 @@ createApp({
         <div class="grid">
           <input v-model="app.auth.nickname" :placeholder="t('nickname')" />
           <input v-model="app.auth.password" type="password" :placeholder="t('password')" />
+          <p class="hint" v-if="app.authError" style="color:#b91c1c;margin:0">{{app.authError}}</p>
           <button class="btn full" @click="login">{{t('loginBtn')}}</button>
         </div>
       </div>
@@ -1208,7 +1273,7 @@ createApp({
             <p>{{trip.itinerary}}</p>
             <div class="row">
               <button class="btn" :class="{liked:isTripLikedByMe(trip)}" @click.stop="likeTrip(trip)">👍 {{trip.likeCount||0}}</button>
-              <button class="btn ghost" @click.stop="openChat(trip.user)" aria-label="会话">聊天</button>
+              <button v-if="trip.user !== app.current" class="btn ghost" @click.stop="openChat(trip.user)" aria-label="会话">聊天</button>
             </div>
             <div class="trip-likers" v-if="tripLikers(trip).length">
               <img v-for="name in tripLikers(trip)" :key="trip.id + '-' + name" class="avatar sm" :src="getUserAvatar(name)" :title="name" :alt="name" />
@@ -1316,6 +1381,10 @@ createApp({
               <h2 style="margin:.1rem 0">{{accountData.user}}{{t('accountHome')}}</h2>
               <p class="hint">行程 {{(accountData.trips||[]).length}} 条 ｜ 日记 {{(accountData.mediaPosts||[]).length}} 条</p>
               <p class="hint">已关注 <button class="inline-link" @click="openFollowList('following', accountData.user)">{{followingCount}}</button> ｜ 粉丝 <button class="inline-link" @click="openFollowList('followers', accountData.user)">{{followerCount}}</button></p>
+              <div class="row" v-if="!isSelfAccount" style="margin-top:6px">
+                <button class="btn ghost" @click="toggleRelation('follow', accountData.user)">{{isFollowingAccount ? '取消关注' : '关注'}}</button>
+                <button class="btn ghost" @click="openChat(accountData.user)">聊天</button>
+              </div>
             </div>
           </div>
           <div class="grid" style="margin-top:8px">
@@ -1507,22 +1576,22 @@ createApp({
 
       <template v-else-if="app.route==='messages'">
         <section class="card full">
-          <div class="row" style="justify-content:space-between"><h2>{{t('messageCenter')}}</h2><button class="btn ghost" @click="markAllAsRead">{{t('markRead')}}</button></div>
+          <div class="row" style="justify-content:space-between"><h2>{{t('messageCenter')}}</h2><div class="row"><button class="btn ghost" @click="app.groupDialog.show=true">发起群聊</button><button class="btn ghost" @click="markAllAsRead">{{t('markRead')}}</button></div></div>
           <div class="row msg-tabs" style="margin-bottom:10px">
-            <button class="btn ghost" :class="{active: app.activeMsgTab==='chats'}" @click="app.activeMsgTab='chats'">用户消息</button>
-            <button class="btn ghost" :class="{active: app.activeMsgTab==='system'}" @click="app.activeMsgTab='system'">系统消息</button>
+            <button class="btn ghost" :class="{active: app.activeMsgTab==='chats'}" @click="app.activeMsgTab='chats'">{{t('chatMsg')}}</button>
+            <button class="btn ghost" :class="{active: app.activeMsgTab==='system'}" @click="app.activeMsgTab='system'">{{t('sysMsg')}}</button>
           </div>
           <div>
             <template v-if="app.activeMsgTab==='chats'">
-              <article class="trip trip-clickable" v-for="c in chatPreviews" :key="c.id" @click="openChat(c.peer)">
+              <article class="trip trip-clickable" v-for="c in chatPreviews" :key="c.id" @click="openChat(c.peer, c.id)">
                 <div class="row" style="justify-content:space-between"><strong>{{c.peer}}</strong><span class="meta">{{fmt(c.last?.createdAt)}}</span></div>
                 <p class="hint">{{c.last?.text || '暂无内容'}} <span v-if="c.unread">· 未读 {{c.unread}}</span></p>
               </article>
-              <p class="hint" v-if="!chatPreviews.length">暂无用户消息</p>
+              <p class="hint" v-if="!chatPreviews.length">{{t('noChatMsg')}}</p>
             </template>
             <template v-else>
               <article class="trip" v-for="m in systemMessages" :key="m.id"><strong>系统提醒</strong><p>{{m.text}}</p><p class="meta">{{fmt(m.createdAt)}}</p></article>
-              <p class="hint" v-if="!systemMessages.length">暂无系统消息</p>
+              <p class="hint" v-if="!systemMessages.length">{{t('noSysMsg')}}</p>
             </template>
           </div>
         </section>
@@ -1564,6 +1633,27 @@ createApp({
             <button class="user-link" type="button" @click.stop="goAccountFromList(name)">{{name}}</button>
           </div>
         </article>
+      </div>
+    </aside>
+    <aside v-if="app.groupDialog.show" class="follow-panel">
+      <div class="follow-panel-card">
+        <div class="row" style="justify-content:space-between">
+          <h3 style="margin:0">选择群聊成员（仅互相关注）</h3>
+          <button class="btn ghost" @click="app.groupDialog.show=false;app.groupDialog.members=[]">关闭</button>
+        </div>
+        <p class="hint" v-if="!mutualFollowUsers.length">暂无可邀请用户</p>
+        <article class="trip trip-clickable" v-for="name in mutualFollowUsers" :key="'group-' + name" @click="toggleGroupMember(name)">
+          <div class="row" style="justify-content:space-between">
+            <div class="row">
+              <img class="avatar" :src="getUserAvatar(name)" :alt="name" />
+              <strong>{{name}}</strong>
+            </div>
+            <input type="checkbox" :checked="app.groupDialog.members.includes(name)" readonly />
+          </div>
+        </article>
+        <div class="row" style="justify-content:flex-end;margin-top:8px">
+          <button class="btn" :disabled="!app.groupDialog.members.length" @click="createGroupChat">创建群聊</button>
+        </div>
       </div>
     </aside>
   </div>`
