@@ -63,6 +63,8 @@ dialog{border:none;border-radius:12px;padding:12px;max-width:min(900px,95vw)}dia
 .avatar-clickable:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(15,23,42,.3)}
 .user-link{border:none;background:transparent;padding:0;font-size:1.08rem;font-weight:700;color:#0f172a;cursor:pointer;line-height:1.2}
 .user-link:hover{text-decoration:underline}
+.inline-link{border:none;background:transparent;color:#0f172a;font-weight:700;cursor:pointer;padding:0 2px}
+.inline-link:hover{text-decoration:underline}
 .msg-badge{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 .3rem;border-radius:999px;background:#111827;color:#fff;font-size:.72rem;line-height:1;margin-left:.3rem}
 .chat-page{min-height:72vh;display:flex;flex-direction:column}
 .chat-history{flex:1;min-height:420px;max-height:calc(72vh - 110px);overflow:auto}
@@ -84,8 +86,12 @@ dialog{border:none;border-radius:12px;padding:12px;max-width:min(900px,95vw)}dia
 .top-userbar .chip{max-width:none;white-space:nowrap;overflow:visible;text-overflow:clip;display:inline-block}
 .top-name{max-width:none}
 .home-message-aside{align-self:stretch;min-height:100%}
+.msg-tabs .btn.active{background:#111827;color:#fff}
+.follow-panel{position:fixed;top:72px;right:16px;z-index:31}
+.follow-panel-card{width:min(420px,92vw);max-height:78vh;overflow:auto;background:var(--card-strong);border:1px solid rgba(148,163,184,.4);border-radius:12px;padding:12px;box-shadow:0 16px 30px rgba(15,23,42,.35);color:#0f172a}
 
 @media (min-width:901px){
-  .route-home .wrap{align-items:stretch}
-  .route-home .home-message-aside{grid-row:1 / span 2}
+  .route-home .wrap{align-items:start}
+  .route-home .home-publish-card{grid-column:1}
+  .route-home .home-message-aside{grid-column:2;grid-row:1}
 }

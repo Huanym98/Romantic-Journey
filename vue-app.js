@@ -172,6 +172,7 @@ createApp({
       showProfilePanel: false,
       supportCount: Number(localStorage.getItem(KEYS.SUPPORT) || 0),
       feedback: { content: '', email: '' },
+      followDialog: { show: false, title: '', users: [] },
       tripEditMode: false,
       diaryEditMode: false,
       tripEditForm: { destination: '', departDate: '', returnDate: '', budget: 0, tags: '', spots: '', itinerary: '', pace: '平衡', wakeUp: '自然醒', social: '适中' },
@@ -917,14 +918,15 @@ createApp({
     const systemMessages = computed(() => {
       const events = read(KEYS.ADMIN, []);
       return events
-        .filter((e) => ['like-trip', 'comment-trip', 'comment-diary', 'toggle-follow'].includes(e.type) && e.payload?.to === app.current)
+        .filter((e) => ['like-trip', 'comment-trip', 'comment-diary'].includes(e.type) && e.payload?.to === app.current)
         .filter((e) => !(['like-trip', 'comment-trip', 'comment-diary'].includes(e.type) && e.payload?.from === e.payload?.to))
         .map((e) => {
           if (e.type === 'like-trip') return { id: e.id, text: `${e.payload.from} 点赞了你的行程`, createdAt: e.createdAt };
           if (e.type === 'comment-trip') return { id: e.id, text: `${e.payload.from} 评论了你的行程`, createdAt: e.createdAt };
           if (e.type === 'comment-diary') return { id: e.id, text: `${e.payload.from} 评论了你的日记`, createdAt: e.createdAt };
-          return { id: e.id, text: `${e.payload.from} 关注了你`, createdAt: e.createdAt };
-        });
+          return null;
+        })
+        .filter(Boolean);
     });
     const unreadChatCount = computed(() => chatPreviews.value.reduce((sum, c) => sum + c.unread, 0));
     const unreadSystemCount = computed(() => {
@@ -953,6 +955,29 @@ createApp({
     });
     const myFollowingCount = computed(() => getFollowingCount(app.current));
     const myFollowerCount = computed(() => getFollowerCount(app.current));
+
+    function openFollowList(kind, user) {
+      const target = user || app.current;
+      if (!target) return;
+      if (kind === 'following') {
+        app.followDialog.title = `${target} 的关注列表`;
+        app.followDialog.users = [...(app.social.follows?.[target] || [])];
+      } else {
+        app.followDialog.title = `${target} 的粉丝列表`;
+        app.followDialog.users = Object.keys(app.social.follows || {}).filter((name) => (app.social.follows?.[name] || []).includes(target));
+      }
+      app.followDialog.show = true;
+    }
+
+    function closeFollowList() {
+      app.followDialog.show = false;
+      app.followDialog.users = [];
+    }
+
+    function goAccountFromList(user) {
+      closeFollowList();
+      openAccount(user);
+    }
 
     onMounted(() => {
       window.addEventListener('hashchange', () => {
@@ -1035,6 +1060,9 @@ createApp({
       myAccountData,
       myFollowingCount,
       myFollowerCount,
+      openFollowList,
+      closeFollowList,
+      goAccountFromList,
       chatPreviews,
       systemMessages,
       unreadChatCount,
@@ -1115,7 +1143,7 @@ createApp({
 
     <main v-else class="wrap">
       <template v-if="app.route==='home'">
-        <section class="card">
+        <section class="card home-publish-card">
           <h3>{{t('publishTrip')}}</h3>
           <form class="grid" @submit.prevent="postTrip">
             <label>{{t('destination')}}
@@ -1214,7 +1242,7 @@ createApp({
             <div>
               <h2 style="margin:.1rem 0">{{myAccountData.user}}{{t('accountHome')}}</h2>
               <p class="hint">行程 {{(myAccountData.trips||[]).length}} 条 ｜ 日记 {{(myAccountData.mediaPosts||[]).length}} 条</p>
-              <p class="hint">已关注 {{myFollowingCount}} ｜ 粉丝 {{myFollowerCount}}</p>
+              <p class="hint">已关注 <button class="inline-link" @click="openFollowList('following', myAccountData.user)">{{myFollowingCount}}</button> ｜ 粉丝 <button class="inline-link" @click="openFollowList('followers', myAccountData.user)">{{myFollowerCount}}</button></p>
             </div>
           </div>
         </section>
@@ -1282,7 +1310,7 @@ createApp({
             <div>
               <h2 style="margin:.1rem 0">{{accountData.user}}{{t('accountHome')}}</h2>
               <p class="hint">行程 {{(accountData.trips||[]).length}} 条 ｜ 日记 {{(accountData.mediaPosts||[]).length}} 条</p>
-              <p class="hint">已关注 {{followingCount}} ｜ 粉丝 {{followerCount}}</p>
+              <p class="hint">已关注 <button class="inline-link" @click="openFollowList('following', accountData.user)">{{followingCount}}</button> ｜ 粉丝 <button class="inline-link" @click="openFollowList('followers', accountData.user)">{{followerCount}}</button></p>
             </div>
           </div>
           <div class="grid" style="margin-top:8px">
@@ -1475,13 +1503,22 @@ createApp({
       <template v-else-if="app.route==='messages'">
         <section class="card full">
           <div class="row" style="justify-content:space-between"><h2>{{t('messageCenter')}}</h2><button class="btn ghost" @click="markAllAsRead">{{t('markRead')}}</button></div>
+          <div class="row msg-tabs" style="margin-bottom:10px">
+            <button class="btn ghost" :class="{active: app.activeMsgTab==='chats'}" @click="app.activeMsgTab='chats'">用户消息</button>
+            <button class="btn ghost" :class="{active: app.activeMsgTab==='system'}" @click="app.activeMsgTab='system'">系统消息</button>
+          </div>
           <div>
-            <article class="trip trip-clickable" v-for="c in chatPreviews" :key="c.id" @click="openChat(c.peer)">
-              <div class="row" style="justify-content:space-between"><strong>{{c.peer}}</strong><span class="meta">{{fmt(c.last?.createdAt)}}</span></div>
-              <p class="hint">{{c.last?.text || '暂无内容'}} <span v-if="c.unread">· 未读 {{c.unread}}</span></p>
-            </article>
-            <article class="trip" v-for="m in systemMessages" :key="m.id"><strong>系统提醒</strong><p>{{m.text}}</p><p class="meta">{{fmt(m.createdAt)}}</p></article>
-            <p class="hint" v-if="!chatPreviews.length && !systemMessages.length">{{t('noMessage')}}</p>
+            <template v-if="app.activeMsgTab==='chats'">
+              <article class="trip trip-clickable" v-for="c in chatPreviews" :key="c.id" @click="openChat(c.peer)">
+                <div class="row" style="justify-content:space-between"><strong>{{c.peer}}</strong><span class="meta">{{fmt(c.last?.createdAt)}}</span></div>
+                <p class="hint">{{c.last?.text || '暂无内容'}} <span v-if="c.unread">· 未读 {{c.unread}}</span></p>
+              </article>
+              <p class="hint" v-if="!chatPreviews.length">暂无用户消息</p>
+            </template>
+            <template v-else>
+              <article class="trip" v-for="m in systemMessages" :key="m.id"><strong>系统提醒</strong><p>{{m.text}}</p><p class="meta">{{fmt(m.createdAt)}}</p></article>
+              <p class="hint" v-if="!systemMessages.length">暂无系统消息</p>
+            </template>
           </div>
         </section>
       </template>
@@ -1509,5 +1546,20 @@ createApp({
     </main>
 
     <dialog ref="pv"><img :src="app.previewSrc" style="max-width:88vw;max-height:80vh;border-radius:10px" /><div class="row" style="justify-content:flex-end;margin-top:8px"><button class="btn ghost" @click="$refs.pv.close()">{{t('close')}}</button></div></dialog>
+    <aside v-if="app.followDialog.show" class="follow-panel">
+      <div class="follow-panel-card">
+        <div class="row" style="justify-content:space-between">
+          <h3 style="margin:0">{{app.followDialog.title}}</h3>
+          <button class="btn ghost" @click="closeFollowList">关闭</button>
+        </div>
+        <p class="hint" v-if="!app.followDialog.users.length">暂无数据</p>
+        <article class="trip trip-clickable" v-for="name in app.followDialog.users" :key="name" @click="goAccountFromList(name)">
+          <div class="row">
+            <img class="avatar avatar-clickable" :src="getUserAvatar(name)" :alt="name" />
+            <button class="user-link" type="button" @click.stop="goAccountFromList(name)">{{name}}</button>
+          </div>
+        </article>
+      </div>
+    </aside>
   </div>`
 }).mount('#app');
