@@ -978,6 +978,11 @@ createApp({
       if (!app.selectedChatId) return null;
       return app.social.chats.find((c) => c.id === app.selectedChatId) || null;
     });
+    const isCurrentGroup = computed(() => Boolean(currentChatMeta.value && (currentChatMeta.value.isGroup || currentChatMeta.value.members?.length > 2)));
+    const chatTitle = computed(() => {
+      if (isCurrentGroup.value) return app.chatPeer || '群聊';
+      return `与 ${app.chatPeer} 聊天`;
+    });
 
     const adminStats = computed(() => {
       const events = read(KEYS.ADMIN, []);
@@ -1176,6 +1181,8 @@ createApp({
       unreadTotal,
       unreadBadgeCount,
       currentChatMeta,
+      isCurrentGroup,
+      chatTitle,
       markAllAsRead
     };
   },
@@ -1600,10 +1607,9 @@ createApp({
       <template v-else-if="app.route==='chat'">
         <section class="card full chat-page">
           <div class="row" style="justify-content:space-between">
-            <h2 style="margin:.2rem 0">与 {{app.chatPeer}} 聊天</h2>
+            <h2 style="margin:.2rem 0">{{chatTitle}}</h2>
             <div class="row">
-              <button class="btn ghost" v-if="currentChatMeta && (currentChatMeta.isGroup || currentChatMeta.members?.length > 2)" @click="dissolveCurrentGroup">解散群聊</button>
-              <button class="btn ghost" v-if="currentChatMeta" @click="removeChat(currentChatMeta.id)">删除聊天记录</button>
+              <button class="btn ghost" v-if="isCurrentGroup" @click="dissolveCurrentGroup">解散群聊</button>
             </div>
           </div>
           <div class="trip chat-history">
