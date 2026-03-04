@@ -906,14 +906,10 @@ createApp({
       const groupName = String(app.groupName || '').trim();
       if (!selected.length || !groupName) return;
       const members = [app.current, ...selected].sort();
-      const key = members.join('|');
-      let chat = app.social.chats.find((c) => Array.isArray(c.members) && c.members.slice().sort().join('|') === key);
-      if (!chat) {
-        chat = { id: uid(), members, name: groupName, messages: [] };
-        app.social.chats.unshift(chat);
-        setSocial(app.social);
-        callSupabase('syncChat', chat, app.current);
-      }
+      const chat = { id: uid(), members, name: groupName, isGroup: true, messages: [] };
+      app.social.chats.unshift(chat);
+      setSocial(app.social);
+      callSupabase('syncChat', chat, app.current);
       app.groupDialog.show = false;
       app.groupDialog.members = [];
       app.groupName = '';
@@ -939,7 +935,7 @@ createApp({
 
     function dissolveCurrentGroup() {
       const chat = currentChatMeta.value;
-      if (!chat || !Array.isArray(chat.members) || chat.members.length <= 2) return;
+      if (!chat || !(chat.isGroup || (Array.isArray(chat.members) && chat.members.length > 2))) return;
       removeChat(chat.id);
     }
     function markAllAsRead() {
@@ -1006,7 +1002,7 @@ createApp({
       return (app.social.chats || [])
         .filter((c) => Array.isArray(c.members) && c.members.includes(app.current))
         .map((c) => {
-          const isGroup = c.members.length > 2;
+          const isGroup = Boolean(c.isGroup) || c.members.length > 2;
           const peer = isGroup ? (c.name || `群聊(${c.members.length})`) : (c.members.find((m) => m !== app.current) || '群聊');
           const messages = Array.isArray(c.messages) ? c.messages : [];
           const last = messages[messages.length - 1] || null;
@@ -1606,7 +1602,7 @@ createApp({
           <div class="row" style="justify-content:space-between">
             <h2 style="margin:.2rem 0">与 {{app.chatPeer}} 聊天</h2>
             <div class="row">
-              <button class="btn ghost" v-if="currentChatMeta && currentChatMeta.members?.length > 2" @click="dissolveCurrentGroup">解散群聊</button>
+              <button class="btn ghost" v-if="currentChatMeta && (currentChatMeta.isGroup || currentChatMeta.members?.length > 2)" @click="dissolveCurrentGroup">解散群聊</button>
               <button class="btn ghost" v-if="currentChatMeta" @click="removeChat(currentChatMeta.id)">删除聊天记录</button>
             </div>
           </div>
