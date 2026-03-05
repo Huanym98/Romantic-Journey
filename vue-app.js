@@ -1,4 +1,4 @@
-const { createApp, reactive, computed, onMounted } = Vue;
+const { createApp, reactive, computed, onMounted, onUnmounted } = Vue;
 
 const KEYS = {
   USERS: 'romanticJourneyUsers',
@@ -13,6 +13,16 @@ const KEYS = {
 };
 const AI_DEFAULT_MODEL = 'gpt-5.2';
 const defaultAvatar = 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=160&q=80';
+const HERO_CAROUSEL = [
+  { lang: 'zh-CN', text: '浪漫之旅' },
+  { lang: 'en', text: 'Romantic Journey' },
+  { lang: 'ja', text: 'ロマンチックな旅' },
+  { lang: 'ko', text: '로맨틱 여행' },
+  { lang: 'fr', text: 'Voyage romantique' },
+  { lang: 'es', text: 'Viaje romántico' },
+  { lang: 'de', text: 'Romantische Reise' },
+  { lang: 'it', text: 'Viaggio romantico' }
+];
 
 const read = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k) || 'null'); return v ?? d; } catch { return d; } };
 const write = (k, v) => localStorage.setItem(k, JSON.stringify(v));
@@ -174,6 +184,7 @@ createApp({
       tripCommentSort: 'newest',
       diaryCommentSort: 'newest',
       lang: localStorage.getItem(KEYS.LANG) || 'zh-CN',
+      heroIndex: 0,
       stateVersion: 0,
       fromSearch: { account: false, trip: false, diary: false },
       showProfilePanel: false,
@@ -1037,6 +1048,8 @@ createApp({
     });
     const unreadTotal = computed(() => unreadChatCount.value + unreadSystemCount.value);
     const unreadBadgeCount = computed(() => unreadChatCount.value);
+    const heroCarousel = computed(() => HERO_CAROUSEL);
+    const activeHero = computed(() => HERO_CAROUSEL[app.heroIndex % HERO_CAROUSEL.length]);
     const myBadges = computed(() => calcBadges(app.state));
     function userBadges(user) {
       const s = stateByUser.value[user] || getState(user);
@@ -1082,14 +1095,27 @@ createApp({
       openAccount(user);
     }
 
+    function setHero(index) {
+      app.heroIndex = index;
+    }
+
+    let heroTimer = null;
+    const onHashChange = () => {
+      app.route = location.hash.replace('#/', '') || 'register';
+    };
     onMounted(() => {
-      window.addEventListener('hashchange', () => {
-        app.route = location.hash.replace('#/', '') || 'register';
-      });
+      window.addEventListener('hashchange', onHashChange);
       if (app.current) {
         upsertCurrentUser();
         refreshMine();
       }
+      heroTimer = window.setInterval(() => {
+        app.heroIndex = (app.heroIndex + 1) % HERO_CAROUSEL.length;
+      }, 2600);
+    });
+    onUnmounted(() => {
+      window.removeEventListener('hashchange', onHashChange);
+      if (heroTimer) window.clearInterval(heroTimer);
     });
 
     return {
@@ -1180,6 +1206,9 @@ createApp({
       unreadSystemCount,
       unreadTotal,
       unreadBadgeCount,
+      heroCarousel,
+      activeHero,
+      setHero,
       currentChatMeta,
       isCurrentGroup,
       chatTitle,
@@ -1192,11 +1221,11 @@ createApp({
       <div class="top-inner">
         <div class="brand"><img src="assets/logo.svg" alt="logo" /><span>{{t('appName')}}</span></div>
         <nav class="nav">
-          <button :class="{active:app.route==='home'}" @click="goto('home')">{{t('navHome')}}</button>
-          <button :class="{active:app.route==='my'}" @click="goto('my')">{{t('navMy')}}</button>
-          <button :class="{active:app.route==='messages'}" @click="goto('messages')">{{t('navMsg')}}<span v-if="unreadBadgeCount" class="msg-badge">{{unreadBadgeCount}}</span></button>
-          <button :class="{active:app.route==='search'}" @click="goto('search')" :aria-label="t('navSearch')">{{t('navSearch')}}</button>
-          <button :class="{active:app.route==='admin'}" @click="goto('admin')">{{t('navAdmin')}}</button>
+          <button :class="{active:app.route==='home'}" @click="goto('home')">⌂ {{t('navHome')}}</button>
+          <button :class="{active:app.route==='my'}" @click="goto('my')">◦ {{t('navMy')}}</button>
+          <button :class="{active:app.route==='messages'}" @click="goto('messages')">✉ {{t('navMsg')}}<span v-if="unreadBadgeCount" class="msg-badge">{{unreadBadgeCount}}</span></button>
+          <button :class="{active:app.route==='search'}" @click="goto('search')" :aria-label="t('navSearch')">⌕ {{t('navSearch')}}</button>
+          <button :class="{active:app.route==='admin'}" @click="goto('admin')">▦ {{t('navAdmin')}}</button>
         </nav>
         <div class="row top-userbar" style="margin-left:auto">
           <select class="lang-switch" v-model="app.lang" @change="setLang" aria-label="language"><option value="zh-CN">中文</option><option value="ko">한국어</option><option value="ja">日本語</option><option value="en">English</option><option value="fr">Français</option></select>
@@ -1259,6 +1288,24 @@ createApp({
 
     <main v-else class="wrap">
       <template v-if="app.route==='home'">
+        <section class="card full hero-banner">
+          <div class="hero-text-wrap">
+            <p class="hero-kicker">Romantic Journey</p>
+            <h2 class="hero-title">{{activeHero.text}}</h2>
+            <p class="hero-lang">{{activeHero.lang}}</p>
+          </div>
+          <div class="hero-dots" role="tablist" aria-label="hero-carousel">
+            <button
+              v-for="(item, index) in heroCarousel"
+              :key="item.lang"
+              class="hero-dot"
+              :class="{active:index===app.heroIndex}"
+              @click="setHero(index)"
+              :title="item.text"
+              :aria-label="item.lang">
+            </button>
+          </div>
+        </section>
         <section class="card home-publish-card">
           <h3>{{t('publishTrip')}}</h3>
           <form class="grid" @submit.prevent="postTrip">

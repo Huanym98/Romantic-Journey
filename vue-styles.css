@@ -27,9 +27,18 @@ body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,PingFang
 .top-inner{width:100%;max-width:none;margin:0;display:flex;gap:12px;align-items:center;padding:10px 24px}
 .brand{font-weight:800;display:flex;align-items:center;gap:8px;color:#f8fafc}.brand img{height:40px}
 .nav{display:flex;gap:8px;flex-wrap:wrap}
-.nav button{border:1px solid rgba(148,163,184,.35);background:rgba(15,23,42,.52);padding:8px 12px;border-radius:10px;color:#f8fafc}
+.nav button{border:1px solid rgba(148,163,184,.35);background:rgba(15,23,42,.52);padding:8px 12px;border-radius:10px;color:#f8fafc;display:inline-flex;align-items:center;gap:6px;font-weight:600}
 .nav button.active{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.44);color:#fff}
 
+
+.hero-banner{display:flex;align-items:center;justify-content:space-between;gap:16px;background:linear-gradient(120deg,rgba(15,23,42,.8),rgba(15,23,42,.58));color:#f8fafc;border-color:rgba(255,255,255,.22)}
+.hero-text-wrap{display:flex;flex-direction:column;gap:6px}
+.hero-kicker{margin:0;color:rgba(226,232,240,.86);font-size:12px;letter-spacing:.18em;text-transform:uppercase}
+.hero-title{margin:0;font-size:clamp(1.35rem,2.4vw,2rem);line-height:1.2}
+.hero-lang{margin:0;color:rgba(226,232,240,.72);font-size:.9rem}
+.hero-dots{display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.hero-dot{width:10px;height:10px;border-radius:999px;border:1px solid rgba(255,255,255,.6);background:transparent;cursor:pointer;padding:0}
+.hero-dot.active{width:20px;background:#fff;border-color:#fff}
 .wrap{max-width:1320px;margin:16px auto;padding:0 16px;display:grid;grid-template-columns:minmax(0,2.2fr) minmax(280px,.8fr);gap:16px}.full{grid-column:1/-1}
 .card{background:var(--card);border:1px solid rgba(255,255,255,.30);border-radius:16px;padding:14px;box-shadow:0 18px 40px rgba(2,6,23,.35);backdrop-filter:blur(8px);color:#0f172a}
 .grid{display:grid;gap:10px;grid-template-columns:repeat(2,minmax(0,1fr))}.grid .full{grid-column:1/-1}
@@ -49,7 +58,7 @@ input[type="file"]::file-selector-button{border:none;background:#e5e7eb;color:#1
 
 .chip{padding:4px 8px;border:1px solid rgba(148,163,184,.5);border-radius:999px;background:rgba(255,255,255,.8);font-size:12px;color:#0f172a}
 dialog{border:none;border-radius:12px;padding:12px;max-width:min(900px,95vw)}dialog::backdrop{background:rgba(0,0,0,.55)}
-@media (max-width:900px){.wrap{grid-template-columns:1fr}.grid{grid-template-columns:1fr}.auth{max-width:92vw}}
+@media (max-width:900px){.wrap{grid-template-columns:1fr}.grid{grid-template-columns:1fr}.auth{max-width:92vw}.hero-banner{flex-direction:column;align-items:flex-start}.hero-dots{justify-content:flex-start}}
 .avatar{width:34px;height:34px;border-radius:50%;object-fit:cover;border:1px solid rgba(148,163,184,.5)}
 .avatar.sm{width:28px;height:28px}.avatar.lg{width:64px;height:64px}
 .msg-row{display:flex;margin:.4rem 0}.msg-row.me{justify-content:flex-end}
