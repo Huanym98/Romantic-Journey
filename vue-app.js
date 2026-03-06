@@ -84,23 +84,36 @@ const now = () => new Date().toISOString();
 const fmt = (t) => new Date(t || Date.now()).toLocaleString('zh-CN', { hour12: false });
 const list = (s) => String(s || '').split(',').map((x) => x.trim()).filter(Boolean);
 const toDataUrl = (file) => new Promise((resolve) => { const r = new FileReader(); r.onload = () => resolve(String(r.result || '')); r.readAsDataURL(file); });
-async function compressImageDataUrl(dataUrl, maxEdge = 1440, quality = 0.82) {
+async function compressImageDataUrl(dataUrl, maxEdge = 1080, quality = 0.72) {
   return new Promise((resolve) => {
     const img = new Image();
     img.onload = () => {
       const w = img.naturalWidth || img.width;
       const h = img.naturalHeight || img.height;
       if (!w || !h) return resolve(dataUrl);
-      const scale = Math.min(1, maxEdge / Math.max(w, h));
-      const cw = Math.max(1, Math.round(w * scale));
-      const ch = Math.max(1, Math.round(h * scale));
       const canvas = document.createElement('canvas');
-      canvas.width = cw;
-      canvas.height = ch;
       const ctx = canvas.getContext('2d');
       if (!ctx) return resolve(dataUrl);
-      ctx.drawImage(img, 0, 0, cw, ch);
-      resolve(canvas.toDataURL('image/jpeg', quality));
+
+      const render = (edge, q) => {
+        const scale = Math.min(1, edge / Math.max(w, h));
+        const cw = Math.max(1, Math.round(w * scale));
+        const ch = Math.max(1, Math.round(h * scale));
+        canvas.width = cw;
+        canvas.height = ch;
+        ctx.clearRect(0, 0, cw, ch);
+        ctx.drawImage(img, 0, 0, cw, ch);
+        return canvas.toDataURL('image/jpeg', q);
+      };
+
+      let out = render(maxEdge, quality);
+      if (out.length > 420000) {
+        out = render(860, 0.62);
+      }
+      if (out.length > 320000) {
+        out = render(760, 0.56);
+      }
+      resolve(out);
     };
     img.onerror = () => resolve(dataUrl);
     img.src = dataUrl;
@@ -274,6 +287,8 @@ createApp({
       selectedDiaryId: '',
       selectedChatId: '',
       previewSrc: '',
+      previewList: [],
+      previewIndex: 0,
       chatPeer: '',
       chatDraft: '',
       activeMsgTab: 'chats',
@@ -909,6 +924,25 @@ createApp({
       app.diaryEditImages.splice(index, 1);
     }
 
+    function openPreviewGallery(images, index = 0) {
+      const list = Array.isArray(images) ? images.filter(Boolean) : [];
+      if (!list.length) return;
+      app.previewList = list;
+      app.previewIndex = Math.max(0, Math.min(index, list.length - 1));
+      app.previewSrc = list[app.previewIndex];
+      if (typeof app.__openPreviewDialog === 'function') app.__openPreviewDialog();
+    }
+    function previewPrev() {
+      if (!app.previewList.length) return;
+      app.previewIndex = (app.previewIndex - 1 + app.previewList.length) % app.previewList.length;
+      app.previewSrc = app.previewList[app.previewIndex];
+    }
+    function previewNext() {
+      if (!app.previewList.length) return;
+      app.previewIndex = (app.previewIndex + 1) % app.previewList.length;
+      app.previewSrc = app.previewList[app.previewIndex];
+    }
+
     async function saveDiaryEdit() {
       if (!ensureLogin() || !app.selectedDiaryId) return;
       if (!app.diaryEditImages.length) {
@@ -1301,6 +1335,9 @@ createApp({
       startEditDiary,
       addDiaryImages,
       removeDiaryImage,
+      openPreviewGallery,
+      previewPrev,
+      previewNext,
       saveDiaryEdit,
       cancelDiaryEdit,
       openAccount,
@@ -1564,7 +1601,10 @@ createApp({
           <article class="trip" v-for="group in myDiaryGroups" :key="group[0].batchId || group[0].id">
             <div class="row" style="justify-content:space-between"><strong>{{group[0].caption}}</strong><span class="meta">{{group[0].location}} · {{fmt(group[0].createdAt)}}</span></div>
             <section class="my-diary-thumb-grid" v-if="group.length">
-              <img v-for="imgItem in group.slice(0,9)" :key="imgItem.id" :src="imgItem.cover" @click="app.previewSrc=imgItem.cover; $refs.pv.showModal()" />
+              <button type="button" class="thumb-tile" v-for="(imgItem, idx) in group.slice(0,9)" :key="imgItem.id" @click="openPreviewGallery(group.map(x=>x.cover), idx)">
+                <img :src="imgItem.cover" />
+                <span v-if="idx===8 && group.length>9" class="thumb-more">+{{group.length-9}}</span>
+              </button>
             </section>
             <div class="row" style="margin-top:6px">
               <button class="btn ghost" @click="openDiary(group[0].id)">{{t('viewDetail')}}</button>
@@ -1731,7 +1771,7 @@ createApp({
                 <p class="hint">已选择图片（可删除）</p>
                 <section class="diary-grid">
                   <div v-for="(img,i) in app.diaryEditImages" :key="img + i" style="position:relative">
-                    <img :src="img" @click="app.previewSrc=img; $refs.pv.showModal()" />
+                    <img :src="img" @click="openPreviewGallery(app.diaryEditImages, i)" />
                     <button type="button" class="btn ghost" style="position:absolute;top:4px;right:4px;padding:2px 6px" @click.stop="removeDiaryImage(i)">×</button>
                   </div>
                 </section>
@@ -1747,7 +1787,10 @@ createApp({
           <h2>{{diaryData.caption}}</h2>
           <p class="hint">{{diaryData.user}} · {{diaryData.location}} · {{diaryData.checkin}}</p>
           <section class="diary-grid diary-grid-nine">
-            <img v-for="(img,i) in diaryData.images" :key="i" :src="img" @click="app.previewSrc=img; $refs.pv.showModal()" />
+            <button type="button" class="thumb-tile" v-for="(img,i) in diaryData.images.slice(0,9)" :key="i" @click="openPreviewGallery(diaryData.images, i)">
+              <img :src="img" />
+              <span v-if="i===8 && diaryData.images.length>9" class="thumb-more">+{{diaryData.images.length-9}}</span>
+            </button>
           </section>
           <div class="row" style="margin-top:8px">
             <button class="btn" :class="{liked:isDiaryLikedByMe(diaryData)}" @click="toggleDiaryLike(diaryData)">👍 {{diaryData.likes?.length || 0}}</button>
@@ -1887,6 +1930,11 @@ createApp({
       <div class="image-preview-wrap">
         <button class="image-preview-close" type="button" aria-label="关闭预览" @click="$refs.pv.close()">×</button>
         <img :src="app.previewSrc" style="max-width:88vw;max-height:80vh;border-radius:10px" />
+        <div class="image-preview-toolbar" v-if="app.previewList.length>1">
+          <button class="btn ghost" type="button" @click="previewPrev">上一张</button>
+          <small class="meta">{{app.previewIndex + 1}} / {{app.previewList.length}}</small>
+          <button class="btn ghost" type="button" @click="previewNext">下一张</button>
+        </div>
       </div>
     </dialog>
     <aside v-if="app.followDialog.show" class="follow-panel">
