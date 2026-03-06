@@ -258,7 +258,8 @@ createApp({
       ai: {
         generating: false,
         error: ''
-      }
+      },
+      feedbackSuccessVisible: false
     });
     const noticeState = reactive(getNoticeState());
 
@@ -549,7 +550,7 @@ createApp({
       if (!content || !email) return;
       addEvent('feedback-submit', { from: app.current || 'guest', content, email });
       app.feedback = { content: '', email: '' };
-      alert('感谢反馈，我们已收到你的建议！');
+      app.feedbackSuccessVisible = true;
     }
 
     function postTrip(event) {
@@ -1081,7 +1082,8 @@ createApp({
         newTrips7d,
         newDiaries7d,
         activeUsers7d,
-        events: events.slice(0, 50)
+        events: events.slice(0, 50),
+        feedbacks: events.filter((e) => e.type === 'feedback-submit').slice(0, 80)
       };
     });
     const chatPreviews = computed(() => {
@@ -1408,8 +1410,8 @@ createApp({
         <section class="card full">
           <div class="row" style="justify-content:space-between;gap:10px;flex-wrap:wrap">
             <h3 style="margin:0">{{t('tripSquare')}}</h3>
-            <div class="row" style="gap:8px;flex-wrap:wrap">
-              <input v-model="app.search" :placeholder="t('searchAll')" style="max-width:280px" />
+            <div class="row trip-square-toolbar" style="gap:8px;flex-wrap:nowrap">
+              <input v-model="app.search" :placeholder="t('searchAll')" class="trip-square-search" />
               <select v-model="app.tripSquareSort" class="trip-square-sort-select" aria-label="行程排序">
                 <option value="comprehensive">综合排序</option>
                 <option value="newest">最新</option>
@@ -1675,7 +1677,7 @@ createApp({
           <template v-else>
           <h2>{{diaryData.caption}}</h2>
           <p class="hint">{{diaryData.user}} · {{diaryData.location}} · {{diaryData.checkin}}</p>
-          <section class="diary-grid">
+          <section class="diary-grid diary-grid-nine">
             <img v-for="(img,i) in diaryData.images" :key="i" :src="img" @click="app.previewSrc=img; $refs.pv.showModal()" />
           </section>
           <div class="row" style="margin-top:8px">
@@ -1747,8 +1749,8 @@ createApp({
         <section class="card full">
           <div class="row" style="justify-content:space-between"><h2>{{t('messageCenter')}}</h2><div class="row"><button class="btn ghost" @click="app.groupDialog.show=true">发起群聊</button><button class="btn ghost" @click="markAllAsRead">{{t('markRead')}}</button></div></div>
           <div class="row msg-tabs" style="margin-bottom:10px">
-            <button class="btn ghost" :class="{active: app.activeMsgTab==='chats'}" @click="app.activeMsgTab='chats'">{{t('chatMsg')}}</button>
-            <button class="btn ghost" :class="{active: app.activeMsgTab==='system'}" @click="app.activeMsgTab='system'">{{t('sysMsg')}}</button>
+            <button class="btn ghost" :class="{active: app.activeMsgTab==='chats'}" @click="app.activeMsgTab='chats'">{{t('chatMsg')}}<span v-if="unreadChatCount" class="tab-unread-badge">{{unreadChatCount > 99 ? '99+' : unreadChatCount}}</span></button>
+            <button class="btn ghost" :class="{active: app.activeMsgTab==='system'}" @click="app.activeMsgTab='system'">{{t('sysMsg')}}<span v-if="unreadSystemCount" class="tab-unread-badge">{{unreadSystemCount > 99 ? '99+' : unreadSystemCount}}</span></button>
           </div>
           <div>
             <template v-if="app.activeMsgTab==='chats'">
@@ -1785,13 +1787,27 @@ createApp({
             <article class="trip"><strong>{{t('newDiaries7d')}}</strong><p class="meta">{{adminStats.newDiaries7d}}</p></article>
             <article class="trip"><strong>{{t('activeUsers7d')}}</strong><p class="meta">{{adminStats.activeUsers7d}}</p></article>
           </div>
+          <h4>用户反馈</h4>
+          <p class="hint" v-if="!adminStats.feedbacks.length">暂无用户反馈</p>
+          <article class="trip" v-for="fb in adminStats.feedbacks" :key="fb.id">
+            <strong>{{fb.payload?.from || 'guest'}} · {{fb.payload?.email || '-'}}</strong>
+            <p>{{fb.payload?.content || '-'}}</p>
+            <p class="meta">{{fmt(fb.createdAt)}}</p>
+          </article>
           <h4>{{t('recentEvents')}}</h4>
           <article class="trip" v-for="e in adminStats.events" :key="e.id"><strong>{{e.type}}</strong><p class="meta">{{fmt(e.createdAt)}} · {{JSON.stringify(e.payload)}}</p></article>
         </section>
       </template>
     </main>
 
-    <dialog ref="pv"><img :src="app.previewSrc" style="max-width:88vw;max-height:80vh;border-radius:10px" /><div class="row" style="justify-content:flex-end;margin-top:8px"><button class="btn ghost" @click="$refs.pv.close()">{{t('close')}}</button></div></dialog>
+    <dialog v-if="app.feedbackSuccessVisible" open class="feedback-success-dialog">
+      <div class="feedback-success-card">
+        <h3>反馈提交成功</h3>
+        <p>感谢反馈，我们已收到你的建议！</p>
+        <div class="row" style="justify-content:flex-end"><button class="btn" @click="app.feedbackSuccessVisible=false">我知道了</button></div>
+      </div>
+    </dialog>
+    <dialog ref="pv" class="image-preview-dialog"><img :src="app.previewSrc" style="max-width:88vw;max-height:80vh;border-radius:10px" /><div class="row" style="justify-content:flex-end;margin-top:8px"><button class="btn ghost" @click="$refs.pv.close()">{{t('close')}}</button></div></dialog>
     <aside v-if="app.followDialog.show" class="follow-panel">
       <div class="follow-panel-card">
         <div class="row" style="justify-content:space-between">
