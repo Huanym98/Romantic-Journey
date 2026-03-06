@@ -909,6 +909,9 @@ function toggleFollow(target) {
   const adding = !set.has(target);
   if (!adding) set.delete(target); else set.add(target);
   social.follows[currentNicknameAuth] = [...set];
+  if (adding) {
+    addNotification(target, `${currentNicknameAuth} ${t('followNotice')}`, 'follow');
+  }
   void syncFollowToSupabase(target, adding);
 }
 function toggleBlock(target) {
@@ -1002,12 +1005,12 @@ function canDeleteComment(comment, trip) {
 
 function getNotifications(user) {
   const list = Array.isArray(social.notifications?.[user]) ? social.notifications[user] : [];
-  return list.filter((item) => ['trip-like', 'trip-comment', 'home-like'].includes(item?.type));
+  return list.filter((item) => ['trip-like', 'trip-comment', 'home-like', 'follow'].includes(item?.type));
 }
 function addNotification(user, title, type = 'general') {
   if (!user || user === currentNicknameAuth) return;
   if (!social.notifications || typeof social.notifications !== 'object') social.notifications = {};
-  if (!['trip-like', 'trip-comment', 'home-like'].includes(type)) return;
+  if (!['trip-like', 'trip-comment', 'home-like', 'follow'].includes(type)) return;
   const list = getNotifications(user);
   social.notifications[user] = [...list, { id: crypto.randomUUID(), title, type, createdAt: new Date().toISOString() }].slice(-80);
   persistSocial();
