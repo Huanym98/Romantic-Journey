@@ -84,7 +84,47 @@ const now = () => new Date().toISOString();
 const fmt = (t) => new Date(t || Date.now()).toLocaleString('zh-CN', { hour12: false });
 const list = (s) => String(s || '').split(',').map((x) => x.trim()).filter(Boolean);
 const toDataUrl = (file) => new Promise((resolve) => { const r = new FileReader(); r.onload = () => resolve(String(r.result || '')); r.readAsDataURL(file); });
-const toDataUrls = (files) => Promise.all(Array.from(files || []).filter((f) => f.type.startsWith('image/')).map((f) => toDataUrl(f)));
+async function compressImageDataUrl(dataUrl, maxEdge = 1440, quality = 0.82) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const w = img.naturalWidth || img.width;
+      const h = img.naturalHeight || img.height;
+      if (!w || !h) return resolve(dataUrl);
+      const scale = Math.min(1, maxEdge / Math.max(w, h));
+      const cw = Math.max(1, Math.round(w * scale));
+      const ch = Math.max(1, Math.round(h * scale));
+      const canvas = document.createElement('canvas');
+      canvas.width = cw;
+      canvas.height = ch;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return resolve(dataUrl);
+      ctx.drawImage(img, 0, 0, cw, ch);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
+async function toOptimizedDataUrl(file) {
+  const raw = await toDataUrl(file);
+  return compressImageDataUrl(raw);
+}
+const toDataUrls = (files) => Promise.all(Array.from(files || []).filter((f) => f.type.startsWith('image/')).map((f) => toOptimizedDataUrl(f)));
+
+function safeSetState(user, state, failMessage = '保存失败，请减少图片数量或压缩后重试。') {
+  try {
+    setState(user, state);
+    return true;
+  } catch (error) {
+    const msg = String(error?.name || error?.message || '');
+    if (msg.includes('QuotaExceeded')) {
+      alert(failMessage);
+      return false;
+    }
+    throw error;
+  }
+}
 
 const I18N = {
   'zh-CN': {
@@ -259,7 +299,9 @@ createApp({
         generating: false,
         error: ''
       },
-      feedbackSuccessVisible: false
+      feedbackSuccessVisible: false,
+      feedbackPage: 1,
+      feedbackPageSize: 10
     });
     const noticeState = reactive(getNoticeState());
 
@@ -442,6 +484,19 @@ createApp({
       if (app.tripSquareSort === 'hottest') return [...filtered].sort((a, b) => tripHeatScore(b) - tripHeatScore(a) || new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
       return [...filtered].sort((a, b) => tripCompositeScore(b) - tripCompositeScore(a));
     });
+    const myDiaryGroups = computed(() => {
+      const source = Array.isArray(app.state.mediaPosts) ? app.state.mediaPosts : [];
+      const map = new Map();
+      source.forEach((item) => {
+        const key = item.batchId || item.id;
+        const list = map.get(key) || [];
+        list.push(item);
+        map.set(key, list);
+      });
+      return Array.from(map.values())
+        .map((rows) => rows.sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0)))
+        .sort((a, b) => new Date(b[0]?.createdAt || 0) - new Date(a[0]?.createdAt || 0));
+    });
 
     function upsertCurrentUser() {
       if (!app.current) return;
@@ -530,7 +585,7 @@ createApp({
         bio: app.profileForm.bio,
         skills: list(app.profileForm.skillsText)
       };
-      setState(app.current, app.state);
+      if (!safeSetState(app.current, app.state, '图片过多或过大，保存失败。请减少数量后重试。')) return;
       app.stateVersion += 1;
       addEvent('profile-save', { user: app.current });
       callSupabase('syncUserProfile', app.current, app.state.profile);
@@ -591,7 +646,7 @@ createApp({
       if (!files.length) return;
       const batchId = uid();
       for (const [index, file] of files.entries()) {
-        const cover = await toDataUrl(file);
+        const cover = await toOptimizedDataUrl(file);
         app.state.mediaPosts.unshift({
           id: uid(),
           user: app.current,
@@ -608,7 +663,7 @@ createApp({
       }
       app.state.mediaPosts.slice(0, files.length).forEach((post) => callSupabase('syncMediaPost', post));
       app.state.mediaPosts = app.state.mediaPosts.slice(0, 50);
-      setState(app.current, app.state);
+      if (!safeSetState(app.current, app.state, '图片过多或过大，日记发布失败。请减少数量后重试。')) return;
       app.stateVersion += 1;
       addEvent('publish-diary', { user: app.current, count: files.length });
       app.mediaForm = { location: '', caption: '', checkin: '' };
@@ -854,7 +909,7 @@ createApp({
       app.diaryEditImages.splice(index, 1);
     }
 
-    function saveDiaryEdit() {
+    async function saveDiaryEdit() {
       if (!ensureLogin() || !app.selectedDiaryId) return;
       if (!app.diaryEditImages.length) {
         alert('至少保留一张图片');
@@ -864,9 +919,10 @@ createApp({
       ownerState.mediaPosts = Array.isArray(ownerState.mediaPosts) ? ownerState.mediaPosts : [];
       const current = ownerState.mediaPosts.find((m) => m.id === app.selectedDiaryId);
       if (!current) return;
+      const optimizedImages = await Promise.all(app.diaryEditImages.map((img) => compressImageDataUrl(img)));
       const batchId = current.batchId || current.id;
       const originalRows = ownerState.mediaPosts.filter((m) => (current.batchId && m.batchId === current.batchId) || m.id === current.id);
-      const deletedRows = originalRows.slice(app.diaryEditImages.length);
+      const deletedRows = originalRows.slice(optimizedImages.length);
       const shared = {
         user: app.current,
         type: current.type || '图片',
@@ -874,13 +930,13 @@ createApp({
         checkin: app.diaryEditForm.checkin,
         batchId,
       };
-      for (let i = 0; i < app.diaryEditImages.length; i += 1) {
-        const caption = app.diaryEditImages.length > 1 ? `${app.diaryEditForm.caption} · ${i + 1}` : app.diaryEditForm.caption;
+      for (let i = 0; i < optimizedImages.length; i += 1) {
+        const caption = optimizedImages.length > 1 ? `${app.diaryEditForm.caption} · ${i + 1}` : app.diaryEditForm.caption;
         if (originalRows[i]) {
-          Object.assign(originalRows[i], shared, { caption, cover: app.diaryEditImages[i] });
+          Object.assign(originalRows[i], shared, { caption, cover: optimizedImages[i] });
           callSupabase('syncMediaPost', originalRows[i]);
         } else {
-          const newPost = { id: uid(), ...shared, caption, cover: app.diaryEditImages[i], createdAt: now(), likes: [], comments: [] };
+          const newPost = { id: uid(), ...shared, caption, cover: optimizedImages[i], createdAt: now(), likes: [], comments: [] };
           ownerState.mediaPosts.unshift(newPost);
           callSupabase('syncMediaPost', newPost);
         }
@@ -888,11 +944,11 @@ createApp({
       const deleteIds = new Set(deletedRows.map((d) => d.id));
       ownerState.mediaPosts = ownerState.mediaPosts.filter((m) => !deleteIds.has(m.id));
       deletedRows.forEach((d) => callSupabase('deleteMediaPost', d.id));
-      setState(app.current, ownerState);
+      if (!safeSetState(app.current, ownerState, '图片过多或过大，日记保存失败。请减少数量后重试。')) return;
       app.state = ownerState;
       app.stateVersion += 1;
       app.diaryEditMode = false;
-      addEvent('edit-diary', { user: app.current, diaryId: current.id, imageCount: app.diaryEditImages.length });
+      addEvent('edit-diary', { user: app.current, diaryId: current.id, imageCount: optimizedImages.length });
     }
 
     function cancelDiaryEdit() {
@@ -1083,9 +1139,17 @@ createApp({
         newDiaries7d,
         activeUsers7d,
         events: events.slice(0, 50),
-        feedbacks: events.filter((e) => e.type === 'feedback-submit').slice(0, 80)
+        feedbacks: events.filter((e) => e.type === 'feedback-submit')
       };
     });
+    const feedbackTotalPages = computed(() => Math.max(1, Math.ceil((adminStats.value.feedbacks?.length || 0) / Number(app.feedbackPageSize || 10))));
+    const feedbackPaged = computed(() => {
+      const page = Math.min(feedbackTotalPages.value, Math.max(1, Number(app.feedbackPage || 1)));
+      const size = Number(app.feedbackPageSize || 10);
+      const start = (page - 1) * size;
+      return (adminStats.value.feedbacks || []).slice(start, start + size);
+    });
+
     const chatPreviews = computed(() => {
       return (app.social.chats || [])
         .filter((c) => Array.isArray(c.members) && c.members.includes(app.current))
@@ -1124,7 +1188,7 @@ createApp({
       return systemMessages.value.filter((m) => new Date(m.createdAt || 0).getTime() > readAt).length;
     });
     const unreadTotal = computed(() => unreadChatCount.value + unreadSystemCount.value);
-    const unreadBadgeCount = computed(() => unreadChatCount.value);
+    const unreadBadgeCount = computed(() => unreadTotal.value);
     const heroCarousel = computed(() => HERO_CAROUSEL);
     const activeHero = computed(() => HERO_CAROUSEL[app.heroIndex % HERO_CAROUSEL.length]);
     const myBadges = computed(() => calcBadges(app.state));
@@ -1283,6 +1347,9 @@ createApp({
       unreadSystemCount,
       unreadTotal,
       unreadBadgeCount,
+      myDiaryGroups,
+      feedbackPaged,
+      feedbackTotalPages,
       heroCarousel,
       activeHero,
       setHero,
@@ -1494,13 +1561,15 @@ createApp({
         </section>
         <section class="card">
           <h3>{{t('myDiaries')}}</h3>
-          <article class="trip" v-for="d in app.state.mediaPosts" :key="d.id">
-            <div class="row" style="justify-content:space-between"><strong>{{d.caption}}</strong><span class="meta">{{d.location}} · {{fmt(d.createdAt)}}</span></div>
-            <img :src="d.cover" style="width:100%;max-height:200px;object-fit:cover;border-radius:8px;border:1px solid var(--line);margin-top:6px" />
+          <article class="trip" v-for="group in myDiaryGroups" :key="group[0].batchId || group[0].id">
+            <div class="row" style="justify-content:space-between"><strong>{{group[0].caption}}</strong><span class="meta">{{group[0].location}} · {{fmt(group[0].createdAt)}}</span></div>
+            <section class="my-diary-thumb-grid" v-if="group.length">
+              <img v-for="imgItem in group.slice(0,9)" :key="imgItem.id" :src="imgItem.cover" @click="app.previewSrc=imgItem.cover; $refs.pv.showModal()" />
+            </section>
             <div class="row" style="margin-top:6px">
-              <button class="btn ghost" @click="openDiary(d.id)">{{t('viewDetail')}}</button>
-              <button class="btn ghost" @click="startEditDiary(d)">编辑</button>
-              <button class="btn ghost" @click="deleteDiary(d)">删除</button>
+              <button class="btn ghost" @click="openDiary(group[0].id)">{{t('viewDetail')}}</button>
+              <button class="btn ghost" @click="startEditDiary(group[0])">编辑</button>
+              <button class="btn ghost" @click="deleteDiary(group[0])">删除</button>
             </div>
           </article>
         </section>
@@ -1662,8 +1731,8 @@ createApp({
                 <p class="hint">已选择图片（可删除）</p>
                 <section class="diary-grid">
                   <div v-for="(img,i) in app.diaryEditImages" :key="img + i" style="position:relative">
-                    <img :src="img" />
-                    <button type="button" class="btn ghost" style="position:absolute;top:4px;right:4px;padding:2px 6px" @click="removeDiaryImage(i)">×</button>
+                    <img :src="img" @click="app.previewSrc=img; $refs.pv.showModal()" />
+                    <button type="button" class="btn ghost" style="position:absolute;top:4px;right:4px;padding:2px 6px" @click.stop="removeDiaryImage(i)">×</button>
                   </div>
                 </section>
               </div>
@@ -1789,7 +1858,14 @@ createApp({
           </div>
           <h4>用户反馈</h4>
           <p class="hint" v-if="!adminStats.feedbacks.length">暂无用户反馈</p>
-          <article class="trip" v-for="fb in adminStats.feedbacks" :key="fb.id">
+          <div class="row" v-if="adminStats.feedbacks.length" style="justify-content:space-between;margin:.35rem 0 .6rem">
+            <small class="meta">第 {{app.feedbackPage}} / {{feedbackTotalPages}} 页（共 {{adminStats.feedbacks.length}} 条）</small>
+            <div class="row">
+              <button class="btn ghost" :disabled="app.feedbackPage<=1" @click="app.feedbackPage=Math.max(1, app.feedbackPage-1)">上一页</button>
+              <button class="btn ghost" :disabled="app.feedbackPage>=feedbackTotalPages" @click="app.feedbackPage=Math.min(feedbackTotalPages, app.feedbackPage+1)">下一页</button>
+            </div>
+          </div>
+          <article class="trip" v-for="fb in feedbackPaged" :key="fb.id">
             <strong>{{fb.payload?.from || 'guest'}} · {{fb.payload?.email || '-'}}</strong>
             <p>{{fb.payload?.content || '-'}}</p>
             <p class="meta">{{fmt(fb.createdAt)}}</p>
