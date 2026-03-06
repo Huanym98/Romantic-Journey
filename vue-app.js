@@ -239,6 +239,7 @@ createApp({
       activeMsgTab: 'chats',
       tripCommentSort: 'newest',
       diaryCommentSort: 'newest',
+      tripSquareSort: 'comprehensive',
       lang: localStorage.getItem(KEYS.LANG) || 'zh-CN',
       heroIndex: 0,
       stateVersion: 0,
@@ -421,10 +422,24 @@ createApp({
     const filteredUsers = computed(() => hasSearchKeyword.value ? app.users.filter((u) => u.nickname.toLowerCase().includes(app.search.toLowerCase())) : []);
     const filteredTrips = computed(() => hasSearchKeyword.value ? allTrips.value.filter((t) => [t.user, t.destination, t.itinerary, (t.tags || []).join(',')].join('|').toLowerCase().includes(app.search.toLowerCase())) : []);
     const filteredDiaries = computed(() => hasSearchKeyword.value ? allDiaries.value.filter((d) => [d.user, d.caption, d.location, d.checkin].join('|').toLowerCase().includes(app.search.toLowerCase())) : []);
+    function tripHeatScore(trip) {
+      const likes = Number(trip?.likeCount || trip?.likes?.length || 0);
+      const comments = Array.isArray(trip?.comments) ? trip.comments.length : 0;
+      return likes * 2 + comments * 3;
+    }
+    function tripCompositeScore(trip) {
+      const ageHours = Math.max(1, (Date.now() - new Date(trip?.createdAt || 0).getTime()) / 3600000);
+      const recencyScore = 120 / ageHours;
+      return tripHeatScore(trip) + recencyScore;
+    }
     const homeTrips = computed(() => {
       const kw = app.search.trim().toLowerCase();
-      if (!kw) return allTrips.value;
-      return allTrips.value.filter((t) => [t.user, t.destination, t.itinerary, (t.tags || []).join(',')].join('|').toLowerCase().includes(kw));
+      const filtered = !kw
+        ? allTrips.value
+        : allTrips.value.filter((t) => [t.user, t.destination, t.itinerary, (t.tags || []).join(',')].join('|').toLowerCase().includes(kw));
+      if (app.tripSquareSort === 'newest') return [...filtered].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+      if (app.tripSquareSort === 'hottest') return [...filtered].sort((a, b) => tripHeatScore(b) - tripHeatScore(a) || new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+      return [...filtered].sort((a, b) => tripCompositeScore(b) - tripCompositeScore(a));
     });
 
     function upsertCurrentUser() {
@@ -608,7 +623,7 @@ createApp({
       app.social[key][app.current] = [...set];
       setSocial(app.social);
       const active = set.has(target);
-      addEvent(type === 'follow' ? 'toggle-follow' : 'toggle-block', { from: app.current, to: target });
+      addEvent(type === 'follow' ? 'toggle-follow' : 'toggle-block', { from: app.current, to: target, active });
       if (type === 'follow') callSupabase('syncFollow', app.current, target, active);
       else callSupabase('syncBlock', app.current, target, active);
     }
@@ -1086,12 +1101,17 @@ createApp({
     const systemMessages = computed(() => {
       const events = read(KEYS.ADMIN, []);
       return events
-        .filter((e) => ['like-trip', 'comment-trip', 'comment-diary'].includes(e.type) && e.payload?.to === app.current)
-        .filter((e) => !(['like-trip', 'comment-trip', 'comment-diary'].includes(e.type) && e.payload?.from === e.payload?.to))
+        .filter((e) => {
+          if (!e?.payload || e.payload.to !== app.current) return false;
+          if (['like-trip', 'comment-trip', 'comment-diary'].includes(e.type)) return e.payload.from !== e.payload.to;
+          if (e.type === 'toggle-follow') return Boolean(e.payload.active) && e.payload.from !== e.payload.to;
+          return false;
+        })
         .map((e) => {
           if (e.type === 'like-trip') return { id: e.id, text: `${e.payload.from} 点赞了你的行程`, createdAt: e.createdAt };
           if (e.type === 'comment-trip') return { id: e.id, text: `${e.payload.from} 评论了你的行程`, createdAt: e.createdAt };
           if (e.type === 'comment-diary') return { id: e.id, text: `${e.payload.from} 评论了你的日记`, createdAt: e.createdAt };
+          if (e.type === 'toggle-follow') return { id: e.id, text: `${e.payload.from} 关注了你`, createdAt: e.createdAt };
           return null;
         })
         .filter(Boolean);
@@ -1386,7 +1406,17 @@ createApp({
         </aside>
 
         <section class="card full">
-          <div class="row"><h3 style="margin:0">{{t('tripSquare')}}</h3><input v-model="app.search" :placeholder="t('searchAll')" style="max-width:280px" /></div>
+          <div class="row" style="justify-content:space-between;gap:10px;flex-wrap:wrap">
+            <h3 style="margin:0">{{t('tripSquare')}}</h3>
+            <div class="row" style="gap:8px;flex-wrap:wrap">
+              <input v-model="app.search" :placeholder="t('searchAll')" style="max-width:280px" />
+              <select v-model="app.tripSquareSort" class="trip-square-sort-select" aria-label="行程排序">
+                <option value="comprehensive">综合排序</option>
+                <option value="newest">最新</option>
+                <option value="hottest">最热</option>
+              </select>
+            </div>
+          </div>
           <article class="trip trip-clickable" v-for="trip in homeTrips" :key="trip.id" @click="openTrip(trip.id)">
             <div class="row" style="justify-content:space-between">
               <div class="row">
@@ -1566,6 +1596,10 @@ createApp({
           </template>
           <template v-else>
           <h2>{{tripData.destination}}</h2>
+          <div class="row" style="gap:8px;margin:.25rem 0 .15rem">
+            <img class="avatar avatar-clickable" :src="tripData.avatar || getUserAvatar(tripData.user) || '${defaultAvatar}'" :alt="tripData.user" @click="openAccount(tripData.user)" />
+            <button class="user-link" type="button" @click="openAccount(tripData.user)">{{tripData.user}}</button>
+          </div>
           <p class="hint">发布者：{{tripData.user}} ｜ {{fmt(tripData.createdAt)}} ｜ 点赞 {{tripData.likeCount||0}}</p>
           <p>{{tripData.itinerary}}</p>
           <p class="hint">景点：{{(tripData.spots||[]).join('、')}}</p>

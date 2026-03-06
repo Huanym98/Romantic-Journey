@@ -66,8 +66,8 @@ input[type="file"]::file-selector-button{border:none;background:#e5e7eb;color:#1
 .trip{border:1px solid rgba(148,163,184,.35);padding:10px;border-radius:12px;margin-bottom:10px;background:var(--card-strong)}.meta{font-size:12px;color:#475569}
 
 .diary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.diary-grid img{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:8px;border:1px solid rgba(148,163,184,.45);cursor:pointer}
-.auth{max-width:560px;min-height:100vh;margin:0 auto;display:flex;align-items:center;justify-content:center;padding:24px}
-.auth-simple .auth-panel{padding:30px 24px;background:rgba(255,255,255,.74);backdrop-filter:blur(8px)}
+.auth{max-width:480px;min-height:100vh;margin:0 auto;display:flex;align-items:center;justify-content:center;padding:18px}
+.auth-simple .auth-panel{padding:20px 18px;background:rgba(255,255,255,.74);backdrop-filter:blur(8px)}
 .auth-panel h2{margin:0 0 6px;font-size:1.8rem;color:#0b1120;letter-spacing:.3px}
 .auth-panel .grid{grid-template-columns:1fr}
 
@@ -104,6 +104,7 @@ dialog{border:none;border-radius:12px;padding:12px;max-width:min(900px,95vw)}dia
 .btn.liked{background:#111827;color:#fff}
 .trip-likers{display:flex;align-items:center;gap:4px;margin:6px 0 2px}.trip-likers .avatar{width:22px;height:22px}
 .comment-sort-select{min-width:90px;padding:6px 8px}
+.trip-square-sort-select{min-width:110px;padding:7px 10px;border-radius:10px;border:1px solid rgba(148,163,184,.45);background:rgba(255,255,255,.92)}
 .btn.ghost.liked{background:#111827;color:#fff;border:1px solid rgba(255,255,255,.3)}
 .trip-comments-block{margin-top:8px}
 .brand span{white-space:nowrap}
@@ -141,8 +142,8 @@ dialog{border:none;border-radius:12px;padding:12px;max-width:min(900px,95vw)}dia
 .top-carousel{ display:flex; align-items:center; justify-content:center; min-height:48px; }
 
 /* login hero dot text bigger */
-.auth-carousel-title.dottext-host{height:200px;}
-.auth-carousel-title canvas{height:200px !important;}
+.auth-carousel-title.dottext-host{height:132px;}
+.auth-carousel-title canvas{height:132px !important;}
 
 /* hide removed carousel placeholder */
 .top-carousel{display:none !important;}
