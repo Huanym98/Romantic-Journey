@@ -519,7 +519,6 @@ createApp({
       addEvent('profile-save', { user: app.current });
       callSupabase('syncUserProfile', app.current, app.state.profile);
       app.showProfilePanel = false;
-      alert('资料已保存');
     }
 
     function supportLike() {
@@ -1275,7 +1274,7 @@ createApp({
   <div :class="['app-shell', 'route-' + app.route]">
     <header class="top" v-if="app.route!=='register'">
       <div class="top-inner">
-        <div class="brand"><img src="assets/logo.svg" alt="logo" /><span>{{t('appName')}}</span></div>
+        <div class="brand"><img src="assets/nav-logo.svg" alt="浪漫之旅 Logo" /></div>
         <nav class="nav">
           <button :class="{active:app.route==='home'}" @click="goto('home')">⌂ {{t('navHome')}}</button>
           <button :class="{active:app.route==='my'}" @click="goto('my')">◦ {{t('navMy')}}</button>
