@@ -239,6 +239,7 @@ createApp({
       activeMsgTab: 'chats',
       tripCommentSort: 'newest',
       diaryCommentSort: 'newest',
+      tripSquareSort: 'comprehensive',
       lang: localStorage.getItem(KEYS.LANG) || 'zh-CN',
       heroIndex: 0,
       stateVersion: 0,
@@ -257,7 +258,8 @@ createApp({
       ai: {
         generating: false,
         error: ''
-      }
+      },
+      feedbackSuccessVisible: false
     });
     const noticeState = reactive(getNoticeState());
 
@@ -421,10 +423,24 @@ createApp({
     const filteredUsers = computed(() => hasSearchKeyword.value ? app.users.filter((u) => u.nickname.toLowerCase().includes(app.search.toLowerCase())) : []);
     const filteredTrips = computed(() => hasSearchKeyword.value ? allTrips.value.filter((t) => [t.user, t.destination, t.itinerary, (t.tags || []).join(',')].join('|').toLowerCase().includes(app.search.toLowerCase())) : []);
     const filteredDiaries = computed(() => hasSearchKeyword.value ? allDiaries.value.filter((d) => [d.user, d.caption, d.location, d.checkin].join('|').toLowerCase().includes(app.search.toLowerCase())) : []);
+    function tripHeatScore(trip) {
+      const likes = Number(trip?.likeCount || trip?.likes?.length || 0);
+      const comments = Array.isArray(trip?.comments) ? trip.comments.length : 0;
+      return likes * 2 + comments * 3;
+    }
+    function tripCompositeScore(trip) {
+      const ageHours = Math.max(1, (Date.now() - new Date(trip?.createdAt || 0).getTime()) / 3600000);
+      const recencyScore = 120 / ageHours;
+      return tripHeatScore(trip) + recencyScore;
+    }
     const homeTrips = computed(() => {
       const kw = app.search.trim().toLowerCase();
-      if (!kw) return allTrips.value;
-      return allTrips.value.filter((t) => [t.user, t.destination, t.itinerary, (t.tags || []).join(',')].join('|').toLowerCase().includes(kw));
+      const filtered = !kw
+        ? allTrips.value
+        : allTrips.value.filter((t) => [t.user, t.destination, t.itinerary, (t.tags || []).join(',')].join('|').toLowerCase().includes(kw));
+      if (app.tripSquareSort === 'newest') return [...filtered].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+      if (app.tripSquareSort === 'hottest') return [...filtered].sort((a, b) => tripHeatScore(b) - tripHeatScore(a) || new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+      return [...filtered].sort((a, b) => tripCompositeScore(b) - tripCompositeScore(a));
     });
 
     function upsertCurrentUser() {
@@ -519,7 +535,6 @@ createApp({
       addEvent('profile-save', { user: app.current });
       callSupabase('syncUserProfile', app.current, app.state.profile);
       app.showProfilePanel = false;
-      alert('资料已保存');
     }
 
     function supportLike() {
@@ -535,7 +550,7 @@ createApp({
       if (!content || !email) return;
       addEvent('feedback-submit', { from: app.current || 'guest', content, email });
       app.feedback = { content: '', email: '' };
-      alert('感谢反馈，我们已收到你的建议！');
+      app.feedbackSuccessVisible = true;
     }
 
     function postTrip(event) {
@@ -609,7 +624,7 @@ createApp({
       app.social[key][app.current] = [...set];
       setSocial(app.social);
       const active = set.has(target);
-      addEvent(type === 'follow' ? 'toggle-follow' : 'toggle-block', { from: app.current, to: target });
+      addEvent(type === 'follow' ? 'toggle-follow' : 'toggle-block', { from: app.current, to: target, active });
       if (type === 'follow') callSupabase('syncFollow', app.current, target, active);
       else callSupabase('syncBlock', app.current, target, active);
     }
@@ -1067,7 +1082,8 @@ createApp({
         newTrips7d,
         newDiaries7d,
         activeUsers7d,
-        events: events.slice(0, 50)
+        events: events.slice(0, 50),
+        feedbacks: events.filter((e) => e.type === 'feedback-submit').slice(0, 80)
       };
     });
     const chatPreviews = computed(() => {
@@ -1087,12 +1103,17 @@ createApp({
     const systemMessages = computed(() => {
       const events = read(KEYS.ADMIN, []);
       return events
-        .filter((e) => ['like-trip', 'comment-trip', 'comment-diary'].includes(e.type) && e.payload?.to === app.current)
-        .filter((e) => !(['like-trip', 'comment-trip', 'comment-diary'].includes(e.type) && e.payload?.from === e.payload?.to))
+        .filter((e) => {
+          if (!e?.payload || e.payload.to !== app.current) return false;
+          if (['like-trip', 'comment-trip', 'comment-diary'].includes(e.type)) return e.payload.from !== e.payload.to;
+          if (e.type === 'toggle-follow') return Boolean(e.payload.active) && e.payload.from !== e.payload.to;
+          return false;
+        })
         .map((e) => {
           if (e.type === 'like-trip') return { id: e.id, text: `${e.payload.from} 点赞了你的行程`, createdAt: e.createdAt };
           if (e.type === 'comment-trip') return { id: e.id, text: `${e.payload.from} 评论了你的行程`, createdAt: e.createdAt };
           if (e.type === 'comment-diary') return { id: e.id, text: `${e.payload.from} 评论了你的日记`, createdAt: e.createdAt };
+          if (e.type === 'toggle-follow') return { id: e.id, text: `${e.payload.from} 关注了你`, createdAt: e.createdAt };
           return null;
         })
         .filter(Boolean);
@@ -1275,7 +1296,7 @@ createApp({
   <div :class="['app-shell', 'route-' + app.route]">
     <header class="top" v-if="app.route!=='register'">
       <div class="top-inner">
-        <div class="brand"><img src="assets/logo.svg" alt="logo" /><span>{{t('appName')}}</span></div>
+        <div class="brand"><img src="assets/nav-logo.svg" alt="浪漫之旅 Logo" /></div>
         <nav class="nav">
           <button :class="{active:app.route==='home'}" @click="goto('home')">⌂ {{t('navHome')}}</button>
           <button :class="{active:app.route==='my'}" @click="goto('my')">◦ {{t('navMy')}}</button>
@@ -1387,7 +1408,17 @@ createApp({
         </aside>
 
         <section class="card full">
-          <div class="row"><h3 style="margin:0">{{t('tripSquare')}}</h3><input v-model="app.search" :placeholder="t('searchAll')" style="max-width:280px" /></div>
+          <div class="row" style="justify-content:space-between;gap:10px;flex-wrap:wrap">
+            <h3 style="margin:0">{{t('tripSquare')}}</h3>
+            <div class="row trip-square-toolbar" style="gap:8px;flex-wrap:nowrap">
+              <input v-model="app.search" :placeholder="t('searchAll')" class="trip-square-search" />
+              <select v-model="app.tripSquareSort" class="trip-square-sort-select" aria-label="行程排序">
+                <option value="comprehensive">综合排序</option>
+                <option value="newest">最新</option>
+                <option value="hottest">最热</option>
+              </select>
+            </div>
+          </div>
           <article class="trip trip-clickable" v-for="trip in homeTrips" :key="trip.id" @click="openTrip(trip.id)">
             <div class="row" style="justify-content:space-between">
               <div class="row">
@@ -1567,6 +1598,10 @@ createApp({
           </template>
           <template v-else>
           <h2>{{tripData.destination}}</h2>
+          <div class="row" style="gap:8px;margin:.25rem 0 .15rem">
+            <img class="avatar avatar-clickable" :src="tripData.avatar || getUserAvatar(tripData.user) || '${defaultAvatar}'" :alt="tripData.user" @click="openAccount(tripData.user)" />
+            <button class="user-link" type="button" @click="openAccount(tripData.user)">{{tripData.user}}</button>
+          </div>
           <p class="hint">发布者：{{tripData.user}} ｜ {{fmt(tripData.createdAt)}} ｜ 点赞 {{tripData.likeCount||0}}</p>
           <p>{{tripData.itinerary}}</p>
           <p class="hint">景点：{{(tripData.spots||[]).join('、')}}</p>
@@ -1642,7 +1677,7 @@ createApp({
           <template v-else>
           <h2>{{diaryData.caption}}</h2>
           <p class="hint">{{diaryData.user}} · {{diaryData.location}} · {{diaryData.checkin}}</p>
-          <section class="diary-grid">
+          <section class="diary-grid diary-grid-nine">
             <img v-for="(img,i) in diaryData.images" :key="i" :src="img" @click="app.previewSrc=img; $refs.pv.showModal()" />
           </section>
           <div class="row" style="margin-top:8px">
@@ -1714,8 +1749,8 @@ createApp({
         <section class="card full">
           <div class="row" style="justify-content:space-between"><h2>{{t('messageCenter')}}</h2><div class="row"><button class="btn ghost" @click="app.groupDialog.show=true">发起群聊</button><button class="btn ghost" @click="markAllAsRead">{{t('markRead')}}</button></div></div>
           <div class="row msg-tabs" style="margin-bottom:10px">
-            <button class="btn ghost" :class="{active: app.activeMsgTab==='chats'}" @click="app.activeMsgTab='chats'">{{t('chatMsg')}}</button>
-            <button class="btn ghost" :class="{active: app.activeMsgTab==='system'}" @click="app.activeMsgTab='system'">{{t('sysMsg')}}</button>
+            <button class="btn ghost" :class="{active: app.activeMsgTab==='chats'}" @click="app.activeMsgTab='chats'">{{t('chatMsg')}}<span v-if="unreadChatCount" class="tab-unread-badge">{{unreadChatCount > 99 ? '99+' : unreadChatCount}}</span></button>
+            <button class="btn ghost" :class="{active: app.activeMsgTab==='system'}" @click="app.activeMsgTab='system'">{{t('sysMsg')}}<span v-if="unreadSystemCount" class="tab-unread-badge">{{unreadSystemCount > 99 ? '99+' : unreadSystemCount}}</span></button>
           </div>
           <div>
             <template v-if="app.activeMsgTab==='chats'">
@@ -1752,13 +1787,32 @@ createApp({
             <article class="trip"><strong>{{t('newDiaries7d')}}</strong><p class="meta">{{adminStats.newDiaries7d}}</p></article>
             <article class="trip"><strong>{{t('activeUsers7d')}}</strong><p class="meta">{{adminStats.activeUsers7d}}</p></article>
           </div>
+          <h4>用户反馈</h4>
+          <p class="hint" v-if="!adminStats.feedbacks.length">暂无用户反馈</p>
+          <article class="trip" v-for="fb in adminStats.feedbacks" :key="fb.id">
+            <strong>{{fb.payload?.from || 'guest'}} · {{fb.payload?.email || '-'}}</strong>
+            <p>{{fb.payload?.content || '-'}}</p>
+            <p class="meta">{{fmt(fb.createdAt)}}</p>
+          </article>
           <h4>{{t('recentEvents')}}</h4>
           <article class="trip" v-for="e in adminStats.events" :key="e.id"><strong>{{e.type}}</strong><p class="meta">{{fmt(e.createdAt)}} · {{JSON.stringify(e.payload)}}</p></article>
         </section>
       </template>
     </main>
 
-    <dialog ref="pv"><img :src="app.previewSrc" style="max-width:88vw;max-height:80vh;border-radius:10px" /><div class="row" style="justify-content:flex-end;margin-top:8px"><button class="btn ghost" @click="$refs.pv.close()">{{t('close')}}</button></div></dialog>
+    <dialog v-if="app.feedbackSuccessVisible" open class="feedback-success-dialog">
+      <div class="feedback-success-card">
+        <h3>反馈提交成功</h3>
+        <p>感谢反馈，我们已收到你的建议！</p>
+        <div class="row" style="justify-content:flex-end"><button class="btn" @click="app.feedbackSuccessVisible=false">我知道了</button></div>
+      </div>
+    </dialog>
+    <dialog ref="pv" class="image-preview-dialog">
+      <div class="image-preview-wrap">
+        <button class="image-preview-close" type="button" aria-label="关闭预览" @click="$refs.pv.close()">×</button>
+        <img :src="app.previewSrc" style="max-width:88vw;max-height:80vh;border-radius:10px" />
+      </div>
+    </dialog>
     <aside v-if="app.followDialog.show" class="follow-panel">
       <div class="follow-panel-card">
         <div class="row" style="justify-content:space-between">

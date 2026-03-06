@@ -25,14 +25,14 @@ body {
 .topbar-inner {
   max-width: 1200px;
   margin: 0 auto;
-  padding: .75rem 1rem;
+  padding: .45rem .9rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  gap: .65rem;
 }
-.brand img { height: 46px; width: auto; display: block; }
-.nav-links { display: flex; gap: 1.2rem; }
+.brand img { height: 48px; width: auto; display: block; }
+.nav-links { display: flex; gap: .9rem; }
 .nav-links a { color: #e8f2ff; text-decoration: none; font-weight: 500; padding: .2rem .15rem; border-bottom: 2px solid transparent; }
 .nav-links a.active { color: #fff; border-bottom-color: #93c5fd; }
 .nav-links .nav-search-link {

@@ -96,6 +96,10 @@ function render() {
 
   card.innerHTML = `
     <h2>${escapeHtml(trip.destination || '未知目的地')}</h2>
+    <div class="author-row" style="margin:.4rem 0 .65rem;">
+      <img class="author-avatar" id="tripAuthorAvatar" src="${escapeHtml(trip.avatar || defaultAvatar)}" alt="${escapeHtml(trip.user || '匿名')}头像" />
+      <button id="tripAuthorHomeBtn" type="button" class="ghost">${escapeHtml(trip.user || '匿名')}</button>
+    </div>
     <p class="hint">发布用户：${escapeHtml(trip.user || '匿名')} ｜ 点赞：${likeCount} ｜ 评论：${comments.length}</p>
     <p class="hint">时间：${escapeHtml(trip.departDate || '未知')} → ${escapeHtml(trip.returnDate || '未知')} ｜ 预算：¥${escapeHtml(trip.budget || '0')}</p>
     <p>${escapeHtml(trip.itinerary || '暂无详细安排')}</p>
@@ -113,6 +117,14 @@ function render() {
     </div>
   `;
 
+  const goAuthorHome = () => {
+    const owner = trip.user || user;
+    if (!owner) return;
+    window.location.href = `account.html?user=${encodeURIComponent(owner)}`;
+  };
+  document.querySelector('#tripAuthorAvatar')?.addEventListener('click', goAuthorHome);
+  document.querySelector('#tripAuthorHomeBtn')?.addEventListener('click', goAuthorHome);
+
   const shareBtn = document.querySelector('#shareTripBtn');
   const shareResult = document.querySelector('#shareResult');
   shareBtn?.addEventListener('click', async () => {
@@ -129,7 +141,13 @@ function render() {
   });
 
   card.querySelectorAll('.comment-avatar[data-user]').forEach((el) => {
-    el.addEventListener('click', () => openPersonDialog(el.dataset.user || ''));
+    el.style.cursor = 'pointer';
+    el.title = '查看用户主页';
+    el.addEventListener('click', () => {
+      const nickname = el.dataset.user || '';
+      if (!nickname) return;
+      window.location.href = `account.html?user=${encodeURIComponent(nickname)}`;
+    });
   });
 }
 
