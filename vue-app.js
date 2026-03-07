@@ -126,6 +126,18 @@ async function toOptimizedDataUrl(file) {
 }
 const toDataUrls = (files) => Promise.all(Array.from(files || []).filter((f) => f.type.startsWith('image/')).map((f) => toOptimizedDataUrl(f)));
 
+function dataUrlToFile(dataUrl, filename = `img-${Date.now()}.jpg`) {
+  if (typeof dataUrl !== 'string') return null;
+  const parts = dataUrl.split(',');
+  if (parts.length < 2) return null;
+  const mimeMatch = parts[0].match(/data:(.*?);base64/);
+  const mime = mimeMatch?.[1] || 'image/jpeg';
+  const binary = atob(parts[1]);
+  const arr = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) arr[i] = binary.charCodeAt(i);
+  return new File([arr], filename, { type: mime });
+}
+
 const MAX_DIARY_UPLOAD_COUNT = 30;
 const MAX_DIARY_TOTAL_MB = 8;
 const MAX_DIARY_TOTAL_BYTES = MAX_DIARY_TOTAL_MB * 1024 * 1024;
@@ -329,6 +341,7 @@ createApp({
       diaryEditForm: { caption: '', location: '', checkin: '' },
       diaryEditImages: [],
       diaryEditEstimatedBytes: 0,
+      diaryEditUploadedBytes: {},
       diaryDraftFiles: [],
       ai: {
         generating: false,
@@ -356,6 +369,28 @@ createApp({
       Promise.resolve(client[method](...args)).catch((err) => {
         console.warn(`[RJSupabase.${method}]`, err?.message || err);
       });
+    }
+
+    function getSupabaseClient() {
+      const client = window.RJSupabase;
+      if (!client || !client.isEnabled?.() || typeof client.uploadDiaryImage !== 'function') return null;
+      return client;
+    }
+
+    async function uploadDiaryFileToStorage(file, batchId, index) {
+      const client = getSupabaseClient();
+      if (!client) throw new Error('Supabase Storage 未配置，请先配置并创建公开 bucket。');
+      const optimized = await toOptimizedDataUrl(file);
+      const uploadFile = dataUrlToFile(optimized, file?.name || `diary-${index + 1}.jpg`) || file;
+      const result = await client.uploadDiaryImage(uploadFile, {
+        nickname: app.current,
+        batchId,
+        index
+      });
+      return {
+        url: result?.url,
+        size: Number(result?.size || uploadFile.size || file.size || 0)
+      };
     }
 
     function resolveOpenAIKey() {
@@ -682,6 +717,10 @@ createApp({
         : Array.from(document.querySelector('#diaryFiles')?.files || []);
       const files = selected.filter((f) => f.type.startsWith('image/'));
       if (!files.length) return;
+      if (!getSupabaseClient()) {
+        alert('请先配置 Supabase（URL / ANON KEY）并启用 Storage bucket，之后再上传图片。');
+        return;
+      }
       if (files.length > MAX_DIARY_UPLOAD_COUNT) {
         alert(`单次最多上传 ${MAX_DIARY_UPLOAD_COUNT} 张图片。`);
         return;
@@ -692,34 +731,38 @@ createApp({
         return;
       }
       const batchId = uid();
-      for (const [index, file] of files.entries()) {
-        const cover = await toOptimizedDataUrl(file);
+      let uploaded;
+      try {
+        uploaded = await Promise.all(files.map((file, index) => uploadDiaryFileToStorage(file, batchId, index)));
+      } catch (error) {
+        alert(`上传图片到 Storage 失败：${error?.message || error}`);
+        return;
+      }
+      for (const [index, item] of uploaded.entries()) {
+        if (!item?.url) continue;
         app.state.mediaPosts.unshift({
           id: uid(),
           user: app.current,
           type: '图片',
           location: app.mediaForm.location,
-          caption: files.length > 1 ? `${app.mediaForm.caption} · ${index + 1}` : app.mediaForm.caption,
+          caption: uploaded.length > 1 ? `${app.mediaForm.caption} · ${index + 1}` : app.mediaForm.caption,
           checkin: app.mediaForm.checkin || `${app.mediaForm.location} · ${fmt(now())}`,
-          cover,
+          cover: item.url,
+          coverSize: Number(item.size || 0),
           batchId,
           createdAt: now(),
           likes: [],
           comments: []
         });
       }
-      app.state.mediaPosts.slice(0, files.length).forEach((post) => callSupabase('syncMediaPost', post));
+      app.state.mediaPosts.slice(0, uploaded.length).forEach((post) => callSupabase('syncMediaPost', post));
       app.state.mediaPosts = app.state.mediaPosts.slice(0, 50);
-      if (!safeSetState(app.current, app.state, '日记发布失败：图片可能过大，或浏览器本地存储空间不足。请减少图片或清理旧数据后重试。')) return;
+      if (!safeSetState(app.current, app.state, '日记发布失败：请稍后重试。')) return;
       app.stateVersion += 1;
-      addEvent('publish-diary', { user: app.current, count: files.length });
+      addEvent('publish-diary', { user: app.current, count: uploaded.length });
       app.mediaForm = { location: '', caption: '', checkin: '' };
       app.diaryDraftFiles = [];
       document.querySelector('#diaryFiles').value = '';
-    }
-
-    function onDiaryFilesChange(event) {
-      app.diaryDraftFiles = Array.from(event?.target?.files || []).filter((f) => f.type.startsWith('image/'));
     }
 
     function toggleRelation(type, target) {
@@ -946,6 +989,10 @@ createApp({
       };
       app.diaryEditImages = rows.map((m) => m.cover).filter(Boolean);
       if (!app.diaryEditImages.length && base.cover) app.diaryEditImages = [base.cover];
+      app.diaryEditUploadedBytes = rows.reduce((acc, row) => {
+        if (row?.cover) acc[row.cover] = Number(row.coverSize || 0);
+        return acc;
+      }, {});
       refreshDiaryEditEstimate();
       app.diaryEditMode = true;
       goto('diary');
@@ -955,44 +1002,60 @@ createApp({
     async function refreshDiaryEditEstimate() {
       const token = ++diaryEditEstimateToken;
       const images = Array.isArray(app.diaryEditImages) ? app.diaryEditImages.slice() : [];
+      const knownBytes = app.diaryEditUploadedBytes && typeof app.diaryEditUploadedBytes === 'object'
+        ? app.diaryEditUploadedBytes
+        : {};
       if (!images.length) {
         app.diaryEditEstimatedBytes = 0;
         return;
       }
-      const optimized = await Promise.all(images.map(async (img) => {
-        try {
-          return await compressImageDataUrl(img);
-        } catch (err) {
-          return img;
-        }
-      }));
+      const estimated = images.reduce((sum, url) => sum + Number(knownBytes[url] || 0), 0);
       if (token !== diaryEditEstimateToken) return;
-      app.diaryEditEstimatedBytes = optimized.reduce((sum, img) => sum + estimateDataUrlBytes(img), 0);
+      app.diaryEditEstimatedBytes = estimated;
     }
 
     async function addDiaryImages(event) {
       const files = Array.from(event?.target?.files || []).filter((f) => f.type.startsWith('image/'));
       if (!files.length) return;
+      if (!getSupabaseClient()) {
+        alert('请先配置 Supabase（URL / ANON KEY）并启用 Storage bucket，之后再上传图片。');
+        event.target.value = '';
+        return;
+      }
       if (app.diaryEditImages.length + files.length > MAX_DIARY_UPLOAD_COUNT) {
         alert(`最多保留 ${MAX_DIARY_UPLOAD_COUNT} 张图片。`);
         event.target.value = '';
         return;
       }
-      const urls = await toDataUrls(files);
       const existingBytes = Number(app.diaryEditEstimatedBytes || 0);
-      const addBytes = urls.reduce((sum, img) => sum + estimateDataUrlBytes(img), 0);
-      if (existingBytes + addBytes > MAX_DIARY_TOTAL_BYTES) {
+      const addRawBytes = files.reduce((sum, f) => sum + Number(f.size || 0), 0);
+      if (existingBytes + addRawBytes > MAX_DIARY_TOTAL_BYTES) {
         alert(`图片总体积不能超过 ${MAX_DIARY_TOTAL_MB}MB。`);
         event.target.value = '';
         return;
       }
-      app.diaryEditImages.push(...urls);
+      const batchId = app.selectedDiaryId || uid();
+      let uploaded;
+      try {
+        uploaded = await Promise.all(files.map((file, index) => uploadDiaryFileToStorage(file, batchId, app.diaryEditImages.length + index)));
+      } catch (error) {
+        alert(`上传图片到 Storage 失败：${error?.message || error}`);
+        event.target.value = '';
+        return;
+      }
+      uploaded.forEach((item) => {
+        if (!item?.url) return;
+        app.diaryEditImages.push(item.url);
+        app.diaryEditUploadedBytes[item.url] = Number(item.size || 0);
+      });
       refreshDiaryEditEstimate();
       event.target.value = '';
     }
 
     function removeDiaryImage(index) {
+      const removed = app.diaryEditImages[index];
       app.diaryEditImages.splice(index, 1);
+      if (removed && app.diaryEditUploadedBytes && typeof app.diaryEditUploadedBytes === 'object') delete app.diaryEditUploadedBytes[removed];
       refreshDiaryEditEstimate();
     }
 
@@ -1025,12 +1088,7 @@ createApp({
         alert(`最多保留 ${MAX_DIARY_UPLOAD_COUNT} 张图片。`);
         return;
       }
-      const optimizedImages = await Promise.all(app.diaryEditImages.map((img) => compressImageDataUrl(img)));
-      const bytesNow = optimizedImages.reduce((sum, img) => sum + estimateDataUrlBytes(img), 0);
-      if (bytesNow > MAX_DIARY_TOTAL_BYTES) {
-        alert(`图片总体积不能超过 ${MAX_DIARY_TOTAL_MB}MB。`);
-        return;
-      }
+      const optimizedImages = app.diaryEditImages.slice();
       const ownerState = getState(app.current);
       ownerState.mediaPosts = Array.isArray(ownerState.mediaPosts) ? ownerState.mediaPosts : [];
       const current = ownerState.mediaPosts.find((m) => m.id === app.selectedDiaryId);
@@ -1048,10 +1106,19 @@ createApp({
       for (let i = 0; i < optimizedImages.length; i += 1) {
         const caption = optimizedImages.length > 1 ? `${app.diaryEditForm.caption} · ${i + 1}` : app.diaryEditForm.caption;
         if (originalRows[i]) {
-          Object.assign(originalRows[i], shared, { caption, cover: optimizedImages[i] });
+          Object.assign(originalRows[i], shared, { caption, cover: optimizedImages[i], coverSize: Number(app.diaryEditUploadedBytes[optimizedImages[i]] || originalRows[i].coverSize || 0) });
           callSupabase('syncMediaPost', originalRows[i]);
         } else {
-          const newPost = { id: uid(), ...shared, caption, cover: optimizedImages[i], createdAt: now(), likes: [], comments: [] };
+          const newPost = {
+            id: uid(),
+            ...shared,
+            caption,
+            cover: optimizedImages[i],
+            coverSize: Number(app.diaryEditUploadedBytes[optimizedImages[i]] || 0),
+            createdAt: now(),
+            likes: [],
+            comments: []
+          };
           ownerState.mediaPosts.unshift(newPost);
           callSupabase('syncMediaPost', newPost);
         }
@@ -1310,14 +1377,6 @@ createApp({
     const draftDiaryMB = computed(() => formatBytesToMB(draftDiaryBytes.value));
     const editDiaryBytes = computed(() => Number(app.diaryEditEstimatedBytes || 0));
     const editDiaryMB = computed(() => formatBytesToMB(editDiaryBytes.value));
-    const currentStateBytes = computed(() => {
-      try {
-        return new Blob([JSON.stringify(app.state || {})]).size;
-      } catch (err) {
-        return 0;
-      }
-    });
-    const currentStateMB = computed(() => formatBytesToMB(currentStateBytes.value));
     const myBadges = computed(() => calcBadges(app.state));
     function userBadges(user) {
       const s = stateByUser.value[user] || getState(user);
@@ -1495,8 +1554,7 @@ createApp({
       MAX_DIARY_TOTAL_MB,
       onDiaryFilesChange,
       draftDiaryMB,
-      editDiaryMB,
-      currentStateMB
+      editDiaryMB
     };
   },
   template: `
@@ -1873,7 +1931,6 @@ createApp({
               <label class="full">追加图片<input type="file" accept="image/*" multiple @change="addDiaryImages" /></label>
               <p class="hint full">最多保留 {{MAX_DIARY_UPLOAD_COUNT}} 张，合计不超过 {{MAX_DIARY_TOTAL_MB}}MB。</p>
               <p class="hint full">当前共 {{app.diaryEditImages.length}} 张，约 {{editDiaryMB}}MB / {{MAX_DIARY_TOTAL_MB}}MB。</p>
-              <p class="hint full">当前账号本地数据约 {{currentStateMB}}MB（浏览器本地存储满也会导致保存失败）。</p>
               <div class="full">
                 <p class="hint">已选择图片（可删除）</p>
                 <section class="diary-grid diary-grid-nine">
