@@ -130,6 +130,11 @@ const MAX_DIARY_UPLOAD_COUNT = 30;
 const MAX_DIARY_TOTAL_MB = 8;
 const MAX_DIARY_TOTAL_BYTES = MAX_DIARY_TOTAL_MB * 1024 * 1024;
 
+function formatBytesToMB(bytes) {
+  const value = Number(bytes || 0) / (1024 * 1024);
+  return Number.isFinite(value) ? value.toFixed(2) : '0.00';
+}
+
 function estimateDataUrlBytes(dataUrl) {
   if (typeof dataUrl !== 'string') return 0;
   const idx = dataUrl.indexOf(',');
@@ -322,6 +327,7 @@ createApp({
       tripEditForm: { destination: '', departDate: '', returnDate: '', budget: 0, tags: '', spots: '', itinerary: '', pace: '平衡', wakeUp: '自然醒', social: '适中' },
       diaryEditForm: { caption: '', location: '', checkin: '' },
       diaryEditImages: [],
+      diaryDraftFiles: [],
       ai: {
         generating: false,
         error: ''
@@ -669,7 +675,10 @@ createApp({
     async function postDiary(event) {
       event?.preventDefault();
       if (!ensureLogin()) return;
-      const files = Array.from(document.querySelector('#diaryFiles')?.files || []).filter((f) => f.type.startsWith('image/'));
+      const selected = Array.isArray(app.diaryDraftFiles) && app.diaryDraftFiles.length
+        ? app.diaryDraftFiles
+        : Array.from(document.querySelector('#diaryFiles')?.files || []);
+      const files = selected.filter((f) => f.type.startsWith('image/'));
       if (!files.length) return;
       if (files.length > MAX_DIARY_UPLOAD_COUNT) {
         alert(`单次最多上传 ${MAX_DIARY_UPLOAD_COUNT} 张图片。`);
@@ -703,7 +712,12 @@ createApp({
       app.stateVersion += 1;
       addEvent('publish-diary', { user: app.current, count: files.length });
       app.mediaForm = { location: '', caption: '', checkin: '' };
+      app.diaryDraftFiles = [];
       document.querySelector('#diaryFiles').value = '';
+    }
+
+    function onDiaryFilesChange(event) {
+      app.diaryDraftFiles = Array.from(event?.target?.files || []).filter((f) => f.type.startsWith('image/'));
     }
 
     function toggleRelation(type, target) {
@@ -1268,6 +1282,10 @@ createApp({
     const unreadBadgeCount = computed(() => unreadTotal.value);
     const heroCarousel = computed(() => HERO_CAROUSEL);
     const activeHero = computed(() => HERO_CAROUSEL[app.heroIndex % HERO_CAROUSEL.length]);
+    const draftDiaryBytes = computed(() => app.diaryDraftFiles.reduce((sum, f) => sum + Number(f?.size || 0), 0));
+    const draftDiaryMB = computed(() => formatBytesToMB(draftDiaryBytes.value));
+    const editDiaryBytes = computed(() => app.diaryEditImages.reduce((sum, img) => sum + estimateDataUrlBytes(img), 0));
+    const editDiaryMB = computed(() => formatBytesToMB(editDiaryBytes.value));
     const myBadges = computed(() => calcBadges(app.state));
     function userBadges(user) {
       const s = stateByUser.value[user] || getState(user);
@@ -1442,7 +1460,10 @@ createApp({
       chatTitle,
       markAllAsRead,
       MAX_DIARY_UPLOAD_COUNT,
-      MAX_DIARY_TOTAL_MB
+      MAX_DIARY_TOTAL_MB,
+      onDiaryFilesChange,
+      draftDiaryMB,
+      editDiaryMB
     };
   },
   template: `
@@ -1617,8 +1638,9 @@ createApp({
             <input v-model="app.mediaForm.location" placeholder="地点" required />
             <input v-model="app.mediaForm.checkin" placeholder="打卡文本（可选）" />
             <input class="full" v-model="app.mediaForm.caption" placeholder="标题" required />
-            <input class="full" id="diaryFiles" type="file" accept="image/*" multiple required />
+            <input class="full" id="diaryFiles" type="file" accept="image/*" multiple required @change="onDiaryFilesChange" />
             <p class="hint full">最多上传 {{MAX_DIARY_UPLOAD_COUNT}} 张，合计不超过 {{MAX_DIARY_TOTAL_MB}}MB（超出将无法保存）。</p>
+            <p class="hint full">当前已选 {{app.diaryDraftFiles.length}} 张，约 {{draftDiaryMB}}MB / {{MAX_DIARY_TOTAL_MB}}MB。</p>
             <button class="btn full">发布日记</button>
           </form>
         </section>
@@ -1818,6 +1840,7 @@ createApp({
               <label>打卡文本<input v-model="app.diaryEditForm.checkin" /></label>
               <label class="full">追加图片<input type="file" accept="image/*" multiple @change="addDiaryImages" /></label>
               <p class="hint full">最多保留 {{MAX_DIARY_UPLOAD_COUNT}} 张，合计不超过 {{MAX_DIARY_TOTAL_MB}}MB。</p>
+              <p class="hint full">当前共 {{app.diaryEditImages.length}} 张，约 {{editDiaryMB}}MB / {{MAX_DIARY_TOTAL_MB}}MB。</p>
               <div class="full">
                 <p class="hint">已选择图片（可删除）</p>
                 <section class="diary-grid diary-grid-nine">
