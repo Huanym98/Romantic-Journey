@@ -132,7 +132,8 @@ const MAX_DIARY_TOTAL_BYTES = MAX_DIARY_TOTAL_MB * 1024 * 1024;
 
 function formatBytesToMB(bytes) {
   const value = Number(bytes || 0) / (1024 * 1024);
-  return Number.isFinite(value) ? value.toFixed(2) : '0.00';
+  if (!Number.isFinite(value)) return '0.00';
+  return (Math.ceil(value * 100) / 100).toFixed(2);
 }
 
 function estimateDataUrlBytes(dataUrl) {
@@ -1673,9 +1674,8 @@ createApp({
           <article class="trip" v-for="group in myDiaryGroups" :key="group[0].batchId || group[0].id">
             <div class="row" style="justify-content:space-between"><strong>{{group[0].caption}}</strong><span class="meta">{{group[0].location}} · {{fmt(group[0].createdAt)}}</span></div>
             <section class="my-diary-thumb-grid" v-if="group.length">
-              <button type="button" class="thumb-tile" v-for="(imgItem, idx) in group.slice(0,9)" :key="imgItem.id" @click="openPreviewGallery(group.map(x=>x.cover), idx)">
+              <button type="button" class="thumb-tile" v-for="(imgItem, idx) in group" :key="imgItem.id" @click="openPreviewGallery(group.map(x=>x.cover), idx)">
                 <img :src="imgItem.cover" />
-                <span v-if="idx===8 && group.length>9" class="thumb-more">+{{group.length-9}}</span>
               </button>
             </section>
             <div class="row" style="margin-top:6px">
@@ -1861,9 +1861,8 @@ createApp({
           <h2>{{diaryData.caption}}</h2>
           <p class="hint">{{diaryData.user}} · {{diaryData.location}} · {{diaryData.checkin}}</p>
           <section class="diary-grid diary-grid-nine">
-            <button type="button" class="thumb-tile" v-for="(img,i) in diaryData.images.slice(0,9)" :key="i" @click="openPreviewGallery(diaryData.images, i)">
+            <button type="button" class="thumb-tile" v-for="(img,i) in diaryData.images" :key="i" @click="openPreviewGallery(diaryData.images, i)">
               <img :src="img" />
-              <span v-if="i===8 && diaryData.images.length>9" class="thumb-more">+{{diaryData.images.length-9}}</span>
             </button>
           </section>
           <div class="row" style="margin-top:8px">
