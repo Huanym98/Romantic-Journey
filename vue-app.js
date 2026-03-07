@@ -328,6 +328,7 @@ createApp({
       tripEditForm: { destination: '', departDate: '', returnDate: '', budget: 0, tags: '', spots: '', itinerary: '', pace: '平衡', wakeUp: '自然醒', social: '适中' },
       diaryEditForm: { caption: '', location: '', checkin: '' },
       diaryEditImages: [],
+      diaryEditEstimatedBytes: 0,
       diaryDraftFiles: [],
       ai: {
         generating: false,
@@ -945,8 +946,28 @@ createApp({
       };
       app.diaryEditImages = rows.map((m) => m.cover).filter(Boolean);
       if (!app.diaryEditImages.length && base.cover) app.diaryEditImages = [base.cover];
+      refreshDiaryEditEstimate();
       app.diaryEditMode = true;
       goto('diary');
+    }
+
+    let diaryEditEstimateToken = 0;
+    async function refreshDiaryEditEstimate() {
+      const token = ++diaryEditEstimateToken;
+      const images = Array.isArray(app.diaryEditImages) ? app.diaryEditImages.slice() : [];
+      if (!images.length) {
+        app.diaryEditEstimatedBytes = 0;
+        return;
+      }
+      const optimized = await Promise.all(images.map(async (img) => {
+        try {
+          return await compressImageDataUrl(img);
+        } catch (err) {
+          return img;
+        }
+      }));
+      if (token !== diaryEditEstimateToken) return;
+      app.diaryEditEstimatedBytes = optimized.reduce((sum, img) => sum + estimateDataUrlBytes(img), 0);
     }
 
     async function addDiaryImages(event) {
@@ -958,7 +979,7 @@ createApp({
         return;
       }
       const urls = await toDataUrls(files);
-      const existingBytes = app.diaryEditImages.reduce((sum, img) => sum + estimateDataUrlBytes(img), 0);
+      const existingBytes = Number(app.diaryEditEstimatedBytes || 0);
       const addBytes = urls.reduce((sum, img) => sum + estimateDataUrlBytes(img), 0);
       if (existingBytes + addBytes > MAX_DIARY_TOTAL_BYTES) {
         alert(`图片总体积不能超过 ${MAX_DIARY_TOTAL_MB}MB。`);
@@ -966,11 +987,13 @@ createApp({
         return;
       }
       app.diaryEditImages.push(...urls);
+      refreshDiaryEditEstimate();
       event.target.value = '';
     }
 
     function removeDiaryImage(index) {
       app.diaryEditImages.splice(index, 1);
+      refreshDiaryEditEstimate();
     }
 
     function openPreviewGallery(images, index = 0) {
@@ -1002,7 +1025,8 @@ createApp({
         alert(`最多保留 ${MAX_DIARY_UPLOAD_COUNT} 张图片。`);
         return;
       }
-      const bytesNow = app.diaryEditImages.reduce((sum, img) => sum + estimateDataUrlBytes(img), 0);
+      const optimizedImages = await Promise.all(app.diaryEditImages.map((img) => compressImageDataUrl(img)));
+      const bytesNow = optimizedImages.reduce((sum, img) => sum + estimateDataUrlBytes(img), 0);
       if (bytesNow > MAX_DIARY_TOTAL_BYTES) {
         alert(`图片总体积不能超过 ${MAX_DIARY_TOTAL_MB}MB。`);
         return;
@@ -1011,7 +1035,6 @@ createApp({
       ownerState.mediaPosts = Array.isArray(ownerState.mediaPosts) ? ownerState.mediaPosts : [];
       const current = ownerState.mediaPosts.find((m) => m.id === app.selectedDiaryId);
       if (!current) return;
-      const optimizedImages = await Promise.all(app.diaryEditImages.map((img) => compressImageDataUrl(img)));
       const batchId = current.batchId || current.id;
       const originalRows = ownerState.mediaPosts.filter((m) => (current.batchId && m.batchId === current.batchId) || m.id === current.id);
       const deletedRows = originalRows.slice(optimizedImages.length);
@@ -1285,7 +1308,7 @@ createApp({
     const activeHero = computed(() => HERO_CAROUSEL[app.heroIndex % HERO_CAROUSEL.length]);
     const draftDiaryBytes = computed(() => app.diaryDraftFiles.reduce((sum, f) => sum + Number(f?.size || 0), 0));
     const draftDiaryMB = computed(() => formatBytesToMB(draftDiaryBytes.value));
-    const editDiaryBytes = computed(() => app.diaryEditImages.reduce((sum, img) => sum + estimateDataUrlBytes(img), 0));
+    const editDiaryBytes = computed(() => Number(app.diaryEditEstimatedBytes || 0));
     const editDiaryMB = computed(() => formatBytesToMB(editDiaryBytes.value));
     const myBadges = computed(() => calcBadges(app.state));
     function userBadges(user) {
@@ -1844,8 +1867,9 @@ createApp({
               <div class="full">
                 <p class="hint">已选择图片（可删除）</p>
                 <section class="diary-grid diary-grid-nine">
-                  <div v-for="(img,i) in app.diaryEditImages" :key="img + i" style="position:relative" class="thumb-tile">
+                  <div v-for="(img,i) in app.diaryEditImages.slice(0,9)" :key="img + i" style="position:relative" class="thumb-tile">
                     <img :src="img" @click="openPreviewGallery(app.diaryEditImages, i)" />
+                    <span v-if="i===8 && app.diaryEditImages.length>9" class="thumb-more" @click="openPreviewGallery(app.diaryEditImages, i)">+{{app.diaryEditImages.length-9}}</span>
                     <button type="button" class="btn ghost" style="position:absolute;top:4px;right:4px;padding:2px 6px;z-index:2" @click.stop="removeDiaryImage(i)">✕</button>
                   </div>
                 </section>
