@@ -143,7 +143,7 @@ function estimateDataUrlBytes(dataUrl) {
   return Math.ceil((base64.length * 3) / 4);
 }
 
-function safeSetState(user, state, failMessage = '保存失败，请减少图片数量或压缩后重试。') {
+function safeSetState(user, state, failMessage = '保存失败：可能是图片过大/过多，或浏览器本地存储空间不足。请减少图片或清理旧数据后重试。') {
   try {
     setState(user, state);
     return true;
@@ -710,7 +710,7 @@ createApp({
       }
       app.state.mediaPosts.slice(0, files.length).forEach((post) => callSupabase('syncMediaPost', post));
       app.state.mediaPosts = app.state.mediaPosts.slice(0, 50);
-      if (!safeSetState(app.current, app.state, '图片过多或过大，日记发布失败。请减少数量后重试。')) return;
+      if (!safeSetState(app.current, app.state, '日记发布失败：图片可能过大，或浏览器本地存储空间不足。请减少图片或清理旧数据后重试。')) return;
       app.stateVersion += 1;
       addEvent('publish-diary', { user: app.current, count: files.length });
       app.mediaForm = { location: '', caption: '', checkin: '' };
@@ -1059,7 +1059,7 @@ createApp({
       const deleteIds = new Set(deletedRows.map((d) => d.id));
       ownerState.mediaPosts = ownerState.mediaPosts.filter((m) => !deleteIds.has(m.id));
       deletedRows.forEach((d) => callSupabase('deleteMediaPost', d.id));
-      if (!safeSetState(app.current, ownerState, '图片过多或过大，日记保存失败。请减少数量后重试。')) return;
+      if (!safeSetState(app.current, ownerState, '日记保存失败：图片可能过大，或浏览器本地存储空间不足。请减少图片或清理旧数据后重试。')) return;
       app.state = ownerState;
       app.stateVersion += 1;
       app.diaryEditMode = false;
@@ -1310,6 +1310,14 @@ createApp({
     const draftDiaryMB = computed(() => formatBytesToMB(draftDiaryBytes.value));
     const editDiaryBytes = computed(() => Number(app.diaryEditEstimatedBytes || 0));
     const editDiaryMB = computed(() => formatBytesToMB(editDiaryBytes.value));
+    const currentStateBytes = computed(() => {
+      try {
+        return new Blob([JSON.stringify(app.state || {})]).size;
+      } catch (err) {
+        return 0;
+      }
+    });
+    const currentStateMB = computed(() => formatBytesToMB(currentStateBytes.value));
     const myBadges = computed(() => calcBadges(app.state));
     function userBadges(user) {
       const s = stateByUser.value[user] || getState(user);
@@ -1487,7 +1495,8 @@ createApp({
       MAX_DIARY_TOTAL_MB,
       onDiaryFilesChange,
       draftDiaryMB,
-      editDiaryMB
+      editDiaryMB,
+      currentStateMB
     };
   },
   template: `
@@ -1864,6 +1873,7 @@ createApp({
               <label class="full">追加图片<input type="file" accept="image/*" multiple @change="addDiaryImages" /></label>
               <p class="hint full">最多保留 {{MAX_DIARY_UPLOAD_COUNT}} 张，合计不超过 {{MAX_DIARY_TOTAL_MB}}MB。</p>
               <p class="hint full">当前共 {{app.diaryEditImages.length}} 张，约 {{editDiaryMB}}MB / {{MAX_DIARY_TOTAL_MB}}MB。</p>
+              <p class="hint full">当前账号本地数据约 {{currentStateMB}}MB（浏览器本地存储满也会导致保存失败）。</p>
               <div class="full">
                 <p class="hint">已选择图片（可删除）</p>
                 <section class="diary-grid diary-grid-nine">
@@ -2025,7 +2035,7 @@ createApp({
     </dialog>
     <dialog ref="pv" class="image-preview-dialog">
       <div class="image-preview-wrap">
-        <button class="image-preview-close" type="button" aria-label="关闭预览" @click="$refs.pv.close()">×</button>
+        <button class="image-preview-close" type="button" aria-label="关闭预览" @click="$refs.pv.close()">✕</button>
         <img :src="app.previewSrc" style="max-width:88vw;max-height:80vh;border-radius:10px" />
         <div class="image-preview-toolbar" v-if="app.previewList.length>1">
           <button class="btn ghost" type="button" @click="previewPrev">上一张</button>
