@@ -85,6 +85,7 @@ const fmt = (t) => new Date(t || Date.now()).toLocaleString('zh-CN', { hour12: f
 const list = (s) => String(s || '').split(',').map((x) => x.trim()).filter(Boolean);
 const toDataUrl = (file) => new Promise((resolve) => { const r = new FileReader(); r.onload = () => resolve(String(r.result || '')); r.readAsDataURL(file); });
 async function compressImageDataUrl(dataUrl, maxEdge = 1080, quality = 0.72) {
+  if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/')) return dataUrl;
   return new Promise((resolve) => {
     const img = new Image();
     img.onload = () => {
@@ -103,16 +104,16 @@ async function compressImageDataUrl(dataUrl, maxEdge = 1080, quality = 0.72) {
         canvas.height = ch;
         ctx.clearRect(0, 0, cw, ch);
         ctx.drawImage(img, 0, 0, cw, ch);
-        return canvas.toDataURL('image/jpeg', q);
+        try {
+          return canvas.toDataURL('image/jpeg', q);
+        } catch {
+          return dataUrl;
+        }
       };
 
       let out = render(maxEdge, quality);
-      if (out.length > 420000) {
-        out = render(860, 0.62);
-      }
-      if (out.length > 320000) {
-        out = render(760, 0.56);
-      }
+      if (out.length > 420000) out = render(860, 0.62);
+      if (out.length > 320000) out = render(760, 0.56);
       resolve(out);
     };
     img.onerror = () => resolve(dataUrl);
@@ -1280,6 +1281,10 @@ createApp({
     };
     onMounted(() => {
       window.addEventListener('hashchange', onHashChange);
+      app.__openPreviewDialog = () => {
+        const dlg = document.querySelector('dialog.image-preview-dialog');
+        if (dlg && typeof dlg.showModal === 'function') dlg.showModal();
+      };
       if (app.current) {
         upsertCurrentUser();
         refreshMine();
@@ -1769,10 +1774,11 @@ createApp({
               <label class="full">追加图片<input type="file" accept="image/*" multiple @change="addDiaryImages" /></label>
               <div class="full">
                 <p class="hint">已选择图片（可删除）</p>
-                <section class="diary-grid">
-                  <div v-for="(img,i) in app.diaryEditImages" :key="img + i" style="position:relative">
+                <section class="diary-grid diary-grid-nine">
+                  <div v-for="(img,i) in app.diaryEditImages.slice(0,9)" :key="img + i" style="position:relative" class="thumb-tile">
                     <img :src="img" @click="openPreviewGallery(app.diaryEditImages, i)" />
-                    <button type="button" class="btn ghost" style="position:absolute;top:4px;right:4px;padding:2px 6px" @click.stop="removeDiaryImage(i)">×</button>
+                    <span v-if="i===8 && app.diaryEditImages.length>9" class="thumb-more" @click="openPreviewGallery(app.diaryEditImages, i)">+{{app.diaryEditImages.length-9}}</span>
+                    <button type="button" class="btn ghost" style="position:absolute;top:4px;right:4px;padding:2px 6px;z-index:2" @click.stop="removeDiaryImage(i)">×</button>
                   </div>
                 </section>
               </div>
