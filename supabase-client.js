@@ -2,7 +2,7 @@
   const URL_KEY = 'romanticJourneySupabaseUrl';
   const ANON_KEY = 'romanticJourneySupabaseAnonKey';
   const STORAGE_BUCKET_KEY = 'romanticJourneySupabaseBucket';
-  const DEFAULT_STORAGE_BUCKET = 'diary-images';
+  const DEFAULT_STORAGE_BUCKET = 'Trip_Photos';
   const userIdCache = new Map();
 
   function normalizeConfig() {

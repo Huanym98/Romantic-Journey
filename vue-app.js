@@ -124,8 +124,6 @@ async function toOptimizedDataUrl(file) {
   const raw = await toDataUrl(file);
   return compressImageDataUrl(raw);
 }
-const toDataUrls = (files) => Promise.all(Array.from(files || []).filter((f) => f.type.startsWith('image/')).map((f) => toOptimizedDataUrl(f)));
-
 function dataUrlToFile(dataUrl, filename = `img-${Date.now()}.jpg`) {
   if (typeof dataUrl !== 'string') return null;
   const parts = dataUrl.split(',');
@@ -146,13 +144,6 @@ function formatBytesToMB(bytes) {
   const value = Number(bytes || 0) / (1024 * 1024);
   if (!Number.isFinite(value)) return '0.00';
   return (Math.ceil(value * 100) / 100).toFixed(2);
-}
-
-function estimateDataUrlBytes(dataUrl) {
-  if (typeof dataUrl !== 'string') return 0;
-  const idx = dataUrl.indexOf(',');
-  const base64 = idx >= 0 ? dataUrl.slice(idx + 1) : dataUrl;
-  return Math.ceil((base64.length * 3) / 4);
 }
 
 function safeSetState(user, state, failMessage = '保存失败：可能是图片过大/过多，或浏览器本地存储空间不足。请减少图片或清理旧数据后重试。') {
