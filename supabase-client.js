@@ -78,21 +78,36 @@
     }
   }
 
+  function normalizeSessionShape(raw) {
+    if (!raw || typeof raw !== 'object') return null;
+    if (raw.access_token && raw.refresh_token) return raw;
+    const nested = raw.session || raw.currentSession || raw.data?.session || null;
+    if (nested?.access_token && nested?.refresh_token) return nested;
+    return null;
+  }
+
   function getStoredAuthSession() {
+    const rawText = localStorage.getItem(AUTH_SESSION_KEY);
+    console.log('[supabase-auth-debug] stored session raw', rawText || null);
     try {
-      const parsed = JSON.parse(localStorage.getItem(AUTH_SESSION_KEY) || 'null');
-      return parsed && typeof parsed === 'object' ? parsed : null;
-    } catch {
+      const parsed = JSON.parse(rawText || 'null');
+      const normalized = normalizeSessionShape(parsed);
+      console.log('[supabase-auth-debug] stored session parsed hasAccessToken', Boolean(normalized?.access_token));
+      console.log('[supabase-auth-debug] stored session parsed hasRefreshToken', Boolean(normalized?.refresh_token));
+      return normalized;
+    } catch (error) {
+      console.error('[supabase-auth-debug] stored session parse failed', error);
       return null;
     }
   }
 
   function setStoredAuthSession(session) {
-    if (!session || !session.access_token) {
+    const normalized = normalizeSessionShape(session);
+    if (!normalized?.access_token || !normalized?.refresh_token) {
       localStorage.removeItem(AUTH_SESSION_KEY);
       return;
     }
-    localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(session));
+    localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(normalized));
   }
 
   function clearStoredAuthSession() {
@@ -123,19 +138,33 @@
 
   async function syncSessionToSupabaseClient(session) {
     const client = getSupabaseClient();
-    if (!client?.auth?.setSession) return null;
-    const target = session || getStoredAuthSession();
-    if (!target?.access_token || !target?.refresh_token) return null;
-    try {
-      const result = await client.auth.setSession({
-        access_token: target.access_token,
-        refresh_token: target.refresh_token
-      });
-      return result?.data?.session || target;
-    } catch (error) {
-      console.warn('[supabase-auth] setSession failed', error);
+    if (!client?.auth?.setSession) {
+      console.error('[supabase-auth-debug] setSession unavailable: client/auth not ready');
       return null;
     }
+    const target = normalizeSessionShape(session) || getStoredAuthSession();
+    console.log('[supabase-auth-debug] setSession input summary', {
+      hasAccessToken: Boolean(target?.access_token),
+      hasRefreshToken: Boolean(target?.refresh_token),
+      accessTokenPrefix: String(target?.access_token || '').slice(0, 16) || null,
+      refreshTokenPrefix: String(target?.refresh_token || '').slice(0, 16) || null
+    });
+    if (!target?.access_token || !target?.refresh_token) {
+      console.error('[supabase-auth-debug] setSession skipped: missing access_token or refresh_token');
+      return null;
+    }
+    const result = await client.auth.setSession({
+      access_token: target.access_token,
+      refresh_token: target.refresh_token
+    });
+    console.log('[supabase-auth-debug] setSession result', { data: result?.data || null, error: result?.error || null });
+    if (result?.error) {
+      console.error('[supabase-auth-debug] setSession failed', result.error);
+      throw result.error;
+    }
+    const sessionAfter = await client.auth.getSession();
+    console.log('[supabase-auth-debug] getSession after setSession', sessionAfter);
+    return result?.data?.session || target;
   }
 
   async function signInWithLocalAccount(nickname, password) {
