@@ -756,6 +756,10 @@ createApp({
       document.querySelector('#diaryFiles').value = '';
     }
 
+    function onDiaryFilesChange(event) {
+      app.diaryDraftFiles = Array.from(event?.target?.files || []).filter((f) => f.type.startsWith('image/'));
+    }
+
     function toggleRelation(type, target) {
       if (!ensureLogin() || !target || target === app.current) return;
       const key = type === 'follow' ? 'follows' : 'blocks';
