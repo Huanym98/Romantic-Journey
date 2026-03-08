@@ -84,7 +84,81 @@ const now = () => new Date().toISOString();
 const fmt = (t) => new Date(t || Date.now()).toLocaleString('zh-CN', { hour12: false });
 const list = (s) => String(s || '').split(',').map((x) => x.trim()).filter(Boolean);
 const toDataUrl = (file) => new Promise((resolve) => { const r = new FileReader(); r.onload = () => resolve(String(r.result || '')); r.readAsDataURL(file); });
-const toDataUrls = (files) => Promise.all(Array.from(files || []).filter((f) => f.type.startsWith('image/')).map((f) => toDataUrl(f)));
+async function compressImageDataUrl(dataUrl, maxEdge = 1080, quality = 0.72) {
+  if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/')) return dataUrl;
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const w = img.naturalWidth || img.width;
+      const h = img.naturalHeight || img.height;
+      if (!w || !h) return resolve(dataUrl);
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return resolve(dataUrl);
+
+      const render = (edge, q) => {
+        const scale = Math.min(1, edge / Math.max(w, h));
+        const cw = Math.max(1, Math.round(w * scale));
+        const ch = Math.max(1, Math.round(h * scale));
+        canvas.width = cw;
+        canvas.height = ch;
+        ctx.clearRect(0, 0, cw, ch);
+        ctx.drawImage(img, 0, 0, cw, ch);
+        try {
+          return canvas.toDataURL('image/jpeg', q);
+        } catch {
+          return dataUrl;
+        }
+      };
+
+      let out = render(maxEdge, quality);
+      if (out.length > 420000) out = render(860, 0.62);
+      if (out.length > 320000) out = render(760, 0.56);
+      resolve(out);
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
+async function toOptimizedDataUrl(file) {
+  const raw = await toDataUrl(file);
+  return compressImageDataUrl(raw);
+}
+function dataUrlToFile(dataUrl, filename = `img-${Date.now()}.jpg`) {
+  if (typeof dataUrl !== 'string') return null;
+  const parts = dataUrl.split(',');
+  if (parts.length < 2) return null;
+  const mimeMatch = parts[0].match(/data:(.*?);base64/);
+  const mime = mimeMatch?.[1] || 'image/jpeg';
+  const binary = atob(parts[1]);
+  const arr = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) arr[i] = binary.charCodeAt(i);
+  return new File([arr], filename, { type: mime });
+}
+
+const MAX_DIARY_UPLOAD_COUNT = 18;
+const MAX_DIARY_TOTAL_MB = 500;
+const MAX_DIARY_TOTAL_BYTES = MAX_DIARY_TOTAL_MB * 1024 * 1024;
+
+function formatBytesToMB(bytes) {
+  const value = Number(bytes || 0) / (1024 * 1024);
+  if (!Number.isFinite(value)) return '0.00';
+  return (Math.ceil(value * 100) / 100).toFixed(2);
+}
+
+function safeSetState(user, state, failMessage = '保存失败：可能是图片过大/过多，或浏览器本地存储空间不足。请减少图片或清理旧数据后重试。') {
+  try {
+    setState(user, state);
+    return true;
+  } catch (error) {
+    const msg = String(error?.name || error?.message || '');
+    if (msg.includes('QuotaExceeded')) {
+      alert(failMessage);
+      return false;
+    }
+    throw error;
+  }
+}
 
 const I18N = {
   'zh-CN': {
@@ -234,11 +308,14 @@ createApp({
       selectedDiaryId: '',
       selectedChatId: '',
       previewSrc: '',
+      previewList: [],
+      previewIndex: 0,
       chatPeer: '',
       chatDraft: '',
       activeMsgTab: 'chats',
       tripCommentSort: 'newest',
       diaryCommentSort: 'newest',
+      tripSquareSort: 'comprehensive',
       lang: localStorage.getItem(KEYS.LANG) || 'zh-CN',
       heroIndex: 0,
       stateVersion: 0,
@@ -254,10 +331,16 @@ createApp({
       tripEditForm: { destination: '', departDate: '', returnDate: '', budget: 0, tags: '', spots: '', itinerary: '', pace: '平衡', wakeUp: '自然醒', social: '适中' },
       diaryEditForm: { caption: '', location: '', checkin: '' },
       diaryEditImages: [],
+      diaryEditEstimatedBytes: 0,
+      diaryEditUploadedBytes: {},
+      diaryDraftFiles: [],
       ai: {
         generating: false,
         error: ''
-      }
+      },
+      feedbackSuccessVisible: false,
+      feedbackPage: 1,
+      feedbackPageSize: 10
     });
     const noticeState = reactive(getNoticeState());
 
@@ -277,6 +360,28 @@ createApp({
       Promise.resolve(client[method](...args)).catch((err) => {
         console.warn(`[RJSupabase.${method}]`, err?.message || err);
       });
+    }
+
+    function getSupabaseClient() {
+      const client = window.RJSupabase;
+      if (!client || !client.isEnabled?.() || typeof client.uploadDiaryImage !== 'function') return null;
+      return client;
+    }
+
+    async function uploadDiaryFileToStorage(file, batchId, index) {
+      const client = getSupabaseClient();
+      if (!client) throw new Error('Supabase Storage 未配置，请先配置并创建公开 bucket。');
+      const optimized = await toOptimizedDataUrl(file);
+      const uploadFile = dataUrlToFile(optimized, file?.name || `diary-${index + 1}.jpg`) || file;
+      const result = await client.uploadDiaryImage(uploadFile, {
+        nickname: app.current,
+        batchId,
+        index
+      });
+      return {
+        url: result?.url,
+        size: Number(result?.size || uploadFile.size || file.size || 0)
+      };
     }
 
     function resolveOpenAIKey() {
@@ -421,10 +526,37 @@ createApp({
     const filteredUsers = computed(() => hasSearchKeyword.value ? app.users.filter((u) => u.nickname.toLowerCase().includes(app.search.toLowerCase())) : []);
     const filteredTrips = computed(() => hasSearchKeyword.value ? allTrips.value.filter((t) => [t.user, t.destination, t.itinerary, (t.tags || []).join(',')].join('|').toLowerCase().includes(app.search.toLowerCase())) : []);
     const filteredDiaries = computed(() => hasSearchKeyword.value ? allDiaries.value.filter((d) => [d.user, d.caption, d.location, d.checkin].join('|').toLowerCase().includes(app.search.toLowerCase())) : []);
+    function tripHeatScore(trip) {
+      const likes = Number(trip?.likeCount || trip?.likes?.length || 0);
+      const comments = Array.isArray(trip?.comments) ? trip.comments.length : 0;
+      return likes * 2 + comments * 3;
+    }
+    function tripCompositeScore(trip) {
+      const ageHours = Math.max(1, (Date.now() - new Date(trip?.createdAt || 0).getTime()) / 3600000);
+      const recencyScore = 120 / ageHours;
+      return tripHeatScore(trip) + recencyScore;
+    }
     const homeTrips = computed(() => {
       const kw = app.search.trim().toLowerCase();
-      if (!kw) return allTrips.value;
-      return allTrips.value.filter((t) => [t.user, t.destination, t.itinerary, (t.tags || []).join(',')].join('|').toLowerCase().includes(kw));
+      const filtered = !kw
+        ? allTrips.value
+        : allTrips.value.filter((t) => [t.user, t.destination, t.itinerary, (t.tags || []).join(',')].join('|').toLowerCase().includes(kw));
+      if (app.tripSquareSort === 'newest') return [...filtered].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+      if (app.tripSquareSort === 'hottest') return [...filtered].sort((a, b) => tripHeatScore(b) - tripHeatScore(a) || new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+      return [...filtered].sort((a, b) => tripCompositeScore(b) - tripCompositeScore(a));
+    });
+    const myDiaryGroups = computed(() => {
+      const source = Array.isArray(app.state.mediaPosts) ? app.state.mediaPosts : [];
+      const map = new Map();
+      source.forEach((item) => {
+        const key = item.batchId || item.id;
+        const list = map.get(key) || [];
+        list.push(item);
+        map.set(key, list);
+      });
+      return Array.from(map.values())
+        .map((rows) => rows.sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0)))
+        .sort((a, b) => new Date(b[0]?.createdAt || 0) - new Date(a[0]?.createdAt || 0));
     });
 
     function upsertCurrentUser() {
@@ -514,12 +646,11 @@ createApp({
         bio: app.profileForm.bio,
         skills: list(app.profileForm.skillsText)
       };
-      setState(app.current, app.state);
+      if (!safeSetState(app.current, app.state, '图片过多或过大，保存失败。请减少数量后重试。')) return;
       app.stateVersion += 1;
       addEvent('profile-save', { user: app.current });
       callSupabase('syncUserProfile', app.current, app.state.profile);
       app.showProfilePanel = false;
-      alert('资料已保存');
     }
 
     function supportLike() {
@@ -535,7 +666,7 @@ createApp({
       if (!content || !email) return;
       addEvent('feedback-submit', { from: app.current || 'guest', content, email });
       app.feedback = { content: '', email: '' };
-      alert('感谢反馈，我们已收到你的建议！');
+      app.feedbackSuccessVisible = true;
     }
 
     function postTrip(event) {
@@ -572,32 +703,61 @@ createApp({
     async function postDiary(event) {
       event?.preventDefault();
       if (!ensureLogin()) return;
-      const files = Array.from(document.querySelector('#diaryFiles')?.files || []).filter((f) => f.type.startsWith('image/'));
+      const selected = Array.isArray(app.diaryDraftFiles) && app.diaryDraftFiles.length
+        ? app.diaryDraftFiles
+        : Array.from(document.querySelector('#diaryFiles')?.files || []);
+      const files = selected.filter((f) => f.type.startsWith('image/'));
       if (!files.length) return;
+      if (!getSupabaseClient()) {
+        alert('请先配置 Supabase（URL / ANON KEY）并启用 Storage bucket，之后再上传图片。');
+        return;
+      }
+      if (files.length > MAX_DIARY_UPLOAD_COUNT) {
+        alert(`单次最多上传 ${MAX_DIARY_UPLOAD_COUNT} 张图片。`);
+        return;
+      }
+      const totalBytes = files.reduce((sum, f) => sum + Number(f.size || 0), 0);
+      if (totalBytes > MAX_DIARY_TOTAL_BYTES) {
+        alert(`图片总体积不能超过 ${MAX_DIARY_TOTAL_MB}MB。`);
+        return;
+      }
       const batchId = uid();
-      for (const [index, file] of files.entries()) {
-        const cover = await toDataUrl(file);
+      let uploaded;
+      try {
+        uploaded = await Promise.all(files.map((file, index) => uploadDiaryFileToStorage(file, batchId, index)));
+      } catch (error) {
+        alert(`上传图片到 Storage 失败：${error?.message || error}`);
+        return;
+      }
+      for (const [index, item] of uploaded.entries()) {
+        if (!item?.url) continue;
         app.state.mediaPosts.unshift({
           id: uid(),
           user: app.current,
           type: '图片',
           location: app.mediaForm.location,
-          caption: files.length > 1 ? `${app.mediaForm.caption} · ${index + 1}` : app.mediaForm.caption,
+          caption: uploaded.length > 1 ? `${app.mediaForm.caption} · ${index + 1}` : app.mediaForm.caption,
           checkin: app.mediaForm.checkin || `${app.mediaForm.location} · ${fmt(now())}`,
-          cover,
+          cover: item.url,
+          coverSize: Number(item.size || 0),
           batchId,
           createdAt: now(),
           likes: [],
           comments: []
         });
       }
-      app.state.mediaPosts.slice(0, files.length).forEach((post) => callSupabase('syncMediaPost', post));
+      app.state.mediaPosts.slice(0, uploaded.length).forEach((post) => callSupabase('syncMediaPost', post));
       app.state.mediaPosts = app.state.mediaPosts.slice(0, 50);
-      setState(app.current, app.state);
+      if (!safeSetState(app.current, app.state, '日记发布失败：请稍后重试。')) return;
       app.stateVersion += 1;
-      addEvent('publish-diary', { user: app.current, count: files.length });
+      addEvent('publish-diary', { user: app.current, count: uploaded.length });
       app.mediaForm = { location: '', caption: '', checkin: '' };
+      app.diaryDraftFiles = [];
       document.querySelector('#diaryFiles').value = '';
+    }
+
+    function onDiaryFilesChange(event) {
+      app.diaryDraftFiles = Array.from(event?.target?.files || []).filter((f) => f.type.startsWith('image/'));
     }
 
     function toggleRelation(type, target) {
@@ -609,7 +769,7 @@ createApp({
       app.social[key][app.current] = [...set];
       setSocial(app.social);
       const active = set.has(target);
-      addEvent(type === 'follow' ? 'toggle-follow' : 'toggle-block', { from: app.current, to: target });
+      addEvent(type === 'follow' ? 'toggle-follow' : 'toggle-block', { from: app.current, to: target, active });
       if (type === 'follow') callSupabase('syncFollow', app.current, target, active);
       else callSupabase('syncBlock', app.current, target, active);
     }
@@ -824,34 +984,113 @@ createApp({
       };
       app.diaryEditImages = rows.map((m) => m.cover).filter(Boolean);
       if (!app.diaryEditImages.length && base.cover) app.diaryEditImages = [base.cover];
+      app.diaryEditUploadedBytes = rows.reduce((acc, row) => {
+        if (row?.cover) acc[row.cover] = Number(row.coverSize || 0);
+        return acc;
+      }, {});
+      refreshDiaryEditEstimate();
       app.diaryEditMode = true;
       goto('diary');
     }
 
+    let diaryEditEstimateToken = 0;
+    async function refreshDiaryEditEstimate() {
+      const token = ++diaryEditEstimateToken;
+      const images = Array.isArray(app.diaryEditImages) ? app.diaryEditImages.slice() : [];
+      const knownBytes = app.diaryEditUploadedBytes && typeof app.diaryEditUploadedBytes === 'object'
+        ? app.diaryEditUploadedBytes
+        : {};
+      if (!images.length) {
+        app.diaryEditEstimatedBytes = 0;
+        return;
+      }
+      const estimated = images.reduce((sum, url) => sum + Number(knownBytes[url] || 0), 0);
+      if (token !== diaryEditEstimateToken) return;
+      app.diaryEditEstimatedBytes = estimated;
+    }
+
     async function addDiaryImages(event) {
-      const urls = await toDataUrls(event?.target?.files || []);
-      if (!urls.length) return;
-      app.diaryEditImages.push(...urls);
+      const files = Array.from(event?.target?.files || []).filter((f) => f.type.startsWith('image/'));
+      if (!files.length) return;
+      if (!getSupabaseClient()) {
+        alert('请先配置 Supabase（URL / ANON KEY）并启用 Storage bucket，之后再上传图片。');
+        event.target.value = '';
+        return;
+      }
+      if (app.diaryEditImages.length + files.length > MAX_DIARY_UPLOAD_COUNT) {
+        alert(`最多保留 ${MAX_DIARY_UPLOAD_COUNT} 张图片。`);
+        event.target.value = '';
+        return;
+      }
+      const existingBytes = Number(app.diaryEditEstimatedBytes || 0);
+      const addRawBytes = files.reduce((sum, f) => sum + Number(f.size || 0), 0);
+      if (existingBytes + addRawBytes > MAX_DIARY_TOTAL_BYTES) {
+        alert(`图片总体积不能超过 ${MAX_DIARY_TOTAL_MB}MB。`);
+        event.target.value = '';
+        return;
+      }
+      const batchId = app.selectedDiaryId || uid();
+      let uploaded;
+      try {
+        uploaded = await Promise.all(files.map((file, index) => uploadDiaryFileToStorage(file, batchId, app.diaryEditImages.length + index)));
+      } catch (error) {
+        alert(`上传图片到 Storage 失败：${error?.message || error}`);
+        event.target.value = '';
+        return;
+      }
+      uploaded.forEach((item) => {
+        if (!item?.url) return;
+        app.diaryEditImages.push(item.url);
+        app.diaryEditUploadedBytes[item.url] = Number(item.size || 0);
+      });
+      refreshDiaryEditEstimate();
       event.target.value = '';
     }
 
     function removeDiaryImage(index) {
+      const removed = app.diaryEditImages[index];
       app.diaryEditImages.splice(index, 1);
+      if (removed && app.diaryEditUploadedBytes && typeof app.diaryEditUploadedBytes === 'object') delete app.diaryEditUploadedBytes[removed];
+      refreshDiaryEditEstimate();
     }
 
-    function saveDiaryEdit() {
+    function openPreviewGallery(images, index = 0) {
+      const list = Array.isArray(images) ? images.filter(Boolean) : [];
+      if (!list.length) return;
+      app.previewList = list;
+      app.previewIndex = Math.max(0, Math.min(index, list.length - 1));
+      app.previewSrc = list[app.previewIndex];
+      if (typeof app.__openPreviewDialog === 'function') app.__openPreviewDialog();
+    }
+    function previewPrev() {
+      if (!app.previewList.length) return;
+      app.previewIndex = (app.previewIndex - 1 + app.previewList.length) % app.previewList.length;
+      app.previewSrc = app.previewList[app.previewIndex];
+    }
+    function previewNext() {
+      if (!app.previewList.length) return;
+      app.previewIndex = (app.previewIndex + 1) % app.previewList.length;
+      app.previewSrc = app.previewList[app.previewIndex];
+    }
+
+    async function saveDiaryEdit() {
       if (!ensureLogin() || !app.selectedDiaryId) return;
       if (!app.diaryEditImages.length) {
         alert('至少保留一张图片');
         return;
       }
+      if (app.diaryEditImages.length > MAX_DIARY_UPLOAD_COUNT) {
+        alert(`最多保留 ${MAX_DIARY_UPLOAD_COUNT} 张图片。`);
+        return;
+      }
+      const optimizedImages = app.diaryEditImages.slice();
       const ownerState = getState(app.current);
       ownerState.mediaPosts = Array.isArray(ownerState.mediaPosts) ? ownerState.mediaPosts : [];
       const current = ownerState.mediaPosts.find((m) => m.id === app.selectedDiaryId);
       if (!current) return;
       const batchId = current.batchId || current.id;
       const originalRows = ownerState.mediaPosts.filter((m) => (current.batchId && m.batchId === current.batchId) || m.id === current.id);
-      const deletedRows = originalRows.slice(app.diaryEditImages.length);
+      const deletedRows = originalRows.slice(optimizedImages.length);
       const shared = {
         user: app.current,
         type: current.type || '图片',
@@ -859,13 +1098,22 @@ createApp({
         checkin: app.diaryEditForm.checkin,
         batchId,
       };
-      for (let i = 0; i < app.diaryEditImages.length; i += 1) {
-        const caption = app.diaryEditImages.length > 1 ? `${app.diaryEditForm.caption} · ${i + 1}` : app.diaryEditForm.caption;
+      for (let i = 0; i < optimizedImages.length; i += 1) {
+        const caption = optimizedImages.length > 1 ? `${app.diaryEditForm.caption} · ${i + 1}` : app.diaryEditForm.caption;
         if (originalRows[i]) {
-          Object.assign(originalRows[i], shared, { caption, cover: app.diaryEditImages[i] });
+          Object.assign(originalRows[i], shared, { caption, cover: optimizedImages[i], coverSize: Number(app.diaryEditUploadedBytes[optimizedImages[i]] || originalRows[i].coverSize || 0) });
           callSupabase('syncMediaPost', originalRows[i]);
         } else {
-          const newPost = { id: uid(), ...shared, caption, cover: app.diaryEditImages[i], createdAt: now(), likes: [], comments: [] };
+          const newPost = {
+            id: uid(),
+            ...shared,
+            caption,
+            cover: optimizedImages[i],
+            coverSize: Number(app.diaryEditUploadedBytes[optimizedImages[i]] || 0),
+            createdAt: now(),
+            likes: [],
+            comments: []
+          };
           ownerState.mediaPosts.unshift(newPost);
           callSupabase('syncMediaPost', newPost);
         }
@@ -873,11 +1121,11 @@ createApp({
       const deleteIds = new Set(deletedRows.map((d) => d.id));
       ownerState.mediaPosts = ownerState.mediaPosts.filter((m) => !deleteIds.has(m.id));
       deletedRows.forEach((d) => callSupabase('deleteMediaPost', d.id));
-      setState(app.current, ownerState);
+      if (!safeSetState(app.current, ownerState, '日记保存失败：图片可能过大，或浏览器本地存储空间不足。请减少图片或清理旧数据后重试。')) return;
       app.state = ownerState;
       app.stateVersion += 1;
       app.diaryEditMode = false;
-      addEvent('edit-diary', { user: app.current, diaryId: current.id, imageCount: app.diaryEditImages.length });
+      addEvent('edit-diary', { user: app.current, diaryId: current.id, imageCount: optimizedImages.length });
     }
 
     function cancelDiaryEdit() {
@@ -1067,9 +1315,18 @@ createApp({
         newTrips7d,
         newDiaries7d,
         activeUsers7d,
-        events: events.slice(0, 50)
+        events: events.slice(0, 50),
+        feedbacks: events.filter((e) => e.type === 'feedback-submit')
       };
     });
+    const feedbackTotalPages = computed(() => Math.max(1, Math.ceil((adminStats.value.feedbacks?.length || 0) / Number(app.feedbackPageSize || 10))));
+    const feedbackPaged = computed(() => {
+      const page = Math.min(feedbackTotalPages.value, Math.max(1, Number(app.feedbackPage || 1)));
+      const size = Number(app.feedbackPageSize || 10);
+      const start = (page - 1) * size;
+      return (adminStats.value.feedbacks || []).slice(start, start + size);
+    });
+
     const chatPreviews = computed(() => {
       return (app.social.chats || [])
         .filter((c) => Array.isArray(c.members) && c.members.includes(app.current))
@@ -1087,12 +1344,17 @@ createApp({
     const systemMessages = computed(() => {
       const events = read(KEYS.ADMIN, []);
       return events
-        .filter((e) => ['like-trip', 'comment-trip', 'comment-diary'].includes(e.type) && e.payload?.to === app.current)
-        .filter((e) => !(['like-trip', 'comment-trip', 'comment-diary'].includes(e.type) && e.payload?.from === e.payload?.to))
+        .filter((e) => {
+          if (!e?.payload || e.payload.to !== app.current) return false;
+          if (['like-trip', 'comment-trip', 'comment-diary'].includes(e.type)) return e.payload.from !== e.payload.to;
+          if (e.type === 'toggle-follow') return Boolean(e.payload.active) && e.payload.from !== e.payload.to;
+          return false;
+        })
         .map((e) => {
           if (e.type === 'like-trip') return { id: e.id, text: `${e.payload.from} 点赞了你的行程`, createdAt: e.createdAt };
           if (e.type === 'comment-trip') return { id: e.id, text: `${e.payload.from} 评论了你的行程`, createdAt: e.createdAt };
           if (e.type === 'comment-diary') return { id: e.id, text: `${e.payload.from} 评论了你的日记`, createdAt: e.createdAt };
+          if (e.type === 'toggle-follow') return { id: e.id, text: `${e.payload.from} 关注了你`, createdAt: e.createdAt };
           return null;
         })
         .filter(Boolean);
@@ -1103,9 +1365,13 @@ createApp({
       return systemMessages.value.filter((m) => new Date(m.createdAt || 0).getTime() > readAt).length;
     });
     const unreadTotal = computed(() => unreadChatCount.value + unreadSystemCount.value);
-    const unreadBadgeCount = computed(() => unreadChatCount.value);
+    const unreadBadgeCount = computed(() => unreadTotal.value);
     const heroCarousel = computed(() => HERO_CAROUSEL);
     const activeHero = computed(() => HERO_CAROUSEL[app.heroIndex % HERO_CAROUSEL.length]);
+    const draftDiaryBytes = computed(() => app.diaryDraftFiles.reduce((sum, f) => sum + Number(f?.size || 0), 0));
+    const draftDiaryMB = computed(() => formatBytesToMB(draftDiaryBytes.value));
+    const editDiaryBytes = computed(() => Number(app.diaryEditEstimatedBytes || 0));
+    const editDiaryMB = computed(() => formatBytesToMB(editDiaryBytes.value));
     const myBadges = computed(() => calcBadges(app.state));
     function userBadges(user) {
       const s = stateByUser.value[user] || getState(user);
@@ -1161,6 +1427,10 @@ createApp({
     };
     onMounted(() => {
       window.addEventListener('hashchange', onHashChange);
+      app.__openPreviewDialog = () => {
+        const dlg = document.querySelector('dialog.image-preview-dialog');
+        if (dlg && typeof dlg.showModal === 'function') dlg.showModal();
+      };
       if (app.current) {
         upsertCurrentUser();
         refreshMine();
@@ -1216,6 +1486,9 @@ createApp({
       startEditDiary,
       addDiaryImages,
       removeDiaryImage,
+      openPreviewGallery,
+      previewPrev,
+      previewNext,
       saveDiaryEdit,
       cancelDiaryEdit,
       openAccount,
@@ -1262,20 +1535,28 @@ createApp({
       unreadSystemCount,
       unreadTotal,
       unreadBadgeCount,
+      myDiaryGroups,
+      feedbackPaged,
+      feedbackTotalPages,
       heroCarousel,
       activeHero,
       setHero,
       currentChatMeta,
       isCurrentGroup,
       chatTitle,
-      markAllAsRead
+      markAllAsRead,
+      MAX_DIARY_UPLOAD_COUNT,
+      MAX_DIARY_TOTAL_MB,
+      onDiaryFilesChange,
+      draftDiaryMB,
+      editDiaryMB
     };
   },
   template: `
   <div :class="['app-shell', 'route-' + app.route]">
     <header class="top" v-if="app.route!=='register'">
       <div class="top-inner">
-        <div class="brand"><img src="assets/logo.svg" alt="logo" /><span>{{t('appName')}}</span></div>
+        <div class="brand"><img src="assets/nav-logo.svg" alt="浪漫之旅 Logo" /></div>
         <nav class="nav">
           <button :class="{active:app.route==='home'}" @click="goto('home')">⌂ {{t('navHome')}}</button>
           <button :class="{active:app.route==='my'}" @click="goto('my')">◦ {{t('navMy')}}</button>
@@ -1387,7 +1668,17 @@ createApp({
         </aside>
 
         <section class="card full">
-          <div class="row"><h3 style="margin:0">{{t('tripSquare')}}</h3><input v-model="app.search" :placeholder="t('searchAll')" style="max-width:280px" /></div>
+          <div class="row" style="justify-content:space-between;gap:10px;flex-wrap:wrap">
+            <h3 style="margin:0">{{t('tripSquare')}}</h3>
+            <div class="row trip-square-toolbar" style="gap:8px;flex-wrap:nowrap">
+              <input v-model="app.search" :placeholder="t('searchAll')" class="trip-square-search" />
+              <select v-model="app.tripSquareSort" class="trip-square-sort-select" aria-label="行程排序">
+                <option value="comprehensive">综合排序</option>
+                <option value="newest">最新</option>
+                <option value="hottest">最热</option>
+              </select>
+            </div>
+          </div>
           <article class="trip trip-clickable" v-for="trip in homeTrips" :key="trip.id" @click="openTrip(trip.id)">
             <div class="row" style="justify-content:space-between">
               <div class="row">
@@ -1433,7 +1724,9 @@ createApp({
             <input v-model="app.mediaForm.location" placeholder="地点" required />
             <input v-model="app.mediaForm.checkin" placeholder="打卡文本（可选）" />
             <input class="full" v-model="app.mediaForm.caption" placeholder="标题" required />
-            <input class="full" id="diaryFiles" type="file" accept="image/*" multiple required />
+            <input class="full" id="diaryFiles" type="file" accept="image/*" multiple required @change="onDiaryFilesChange" />
+            <p class="hint full">最多上传 {{MAX_DIARY_UPLOAD_COUNT}} 张，合计不超过 {{MAX_DIARY_TOTAL_MB}}MB（超出将无法保存）。</p>
+            <p class="hint full">当前已选 {{app.diaryDraftFiles.length}} 张，约 {{draftDiaryMB}}MB / {{MAX_DIARY_TOTAL_MB}}MB。</p>
             <button class="btn full">发布日记</button>
           </form>
         </section>
@@ -1463,13 +1756,17 @@ createApp({
         </section>
         <section class="card">
           <h3>{{t('myDiaries')}}</h3>
-          <article class="trip" v-for="d in app.state.mediaPosts" :key="d.id">
-            <div class="row" style="justify-content:space-between"><strong>{{d.caption}}</strong><span class="meta">{{d.location}} · {{fmt(d.createdAt)}}</span></div>
-            <img :src="d.cover" style="width:100%;max-height:200px;object-fit:cover;border-radius:8px;border:1px solid var(--line);margin-top:6px" />
+          <article class="trip" v-for="group in myDiaryGroups" :key="group[0].batchId || group[0].id">
+            <div class="row" style="justify-content:space-between"><strong>{{group[0].caption}}</strong><span class="meta">{{group[0].location}} · {{fmt(group[0].createdAt)}}</span></div>
+            <section class="my-diary-thumb-grid" v-if="group.length">
+              <button type="button" class="thumb-tile" v-for="(imgItem, idx) in group" :key="imgItem.id" @click="openPreviewGallery(group.map(x=>x.cover), idx)">
+                <img :src="imgItem.cover" />
+              </button>
+            </section>
             <div class="row" style="margin-top:6px">
-              <button class="btn ghost" @click="openDiary(d.id)">{{t('viewDetail')}}</button>
-              <button class="btn ghost" @click="startEditDiary(d)">编辑</button>
-              <button class="btn ghost" @click="deleteDiary(d)">删除</button>
+              <button class="btn ghost" @click="openDiary(group[0].id)">{{t('viewDetail')}}</button>
+              <button class="btn ghost" @click="startEditDiary(group[0])">编辑</button>
+              <button class="btn ghost" @click="deleteDiary(group[0])">删除</button>
             </div>
           </article>
         </section>
@@ -1567,6 +1864,10 @@ createApp({
           </template>
           <template v-else>
           <h2>{{tripData.destination}}</h2>
+          <div class="row" style="gap:8px;margin:.25rem 0 .15rem">
+            <img class="avatar avatar-clickable" :src="tripData.avatar || getUserAvatar(tripData.user) || '${defaultAvatar}'" :alt="tripData.user" @click="openAccount(tripData.user)" />
+            <button class="user-link" type="button" @click="openAccount(tripData.user)">{{tripData.user}}</button>
+          </div>
           <p class="hint">发布者：{{tripData.user}} ｜ {{fmt(tripData.createdAt)}} ｜ 点赞 {{tripData.likeCount||0}}</p>
           <p>{{tripData.itinerary}}</p>
           <p class="hint">景点：{{(tripData.spots||[]).join('、')}}</p>
@@ -1623,12 +1924,15 @@ createApp({
               <label>地点<input v-model="app.diaryEditForm.location" required /></label>
               <label>打卡文本<input v-model="app.diaryEditForm.checkin" /></label>
               <label class="full">追加图片<input type="file" accept="image/*" multiple @change="addDiaryImages" /></label>
+              <p class="hint full">最多保留 {{MAX_DIARY_UPLOAD_COUNT}} 张，合计不超过 {{MAX_DIARY_TOTAL_MB}}MB。</p>
+              <p class="hint full">当前共 {{app.diaryEditImages.length}} 张，约 {{editDiaryMB}}MB / {{MAX_DIARY_TOTAL_MB}}MB。</p>
               <div class="full">
                 <p class="hint">已选择图片（可删除）</p>
-                <section class="diary-grid">
-                  <div v-for="(img,i) in app.diaryEditImages" :key="img + i" style="position:relative">
-                    <img :src="img" />
-                    <button type="button" class="btn ghost" style="position:absolute;top:4px;right:4px;padding:2px 6px" @click="removeDiaryImage(i)">×</button>
+                <section class="diary-grid diary-grid-nine">
+                  <div v-for="(img,i) in app.diaryEditImages.slice(0,9)" :key="img + i" style="position:relative" class="thumb-tile">
+                    <img :src="img" @click="openPreviewGallery(app.diaryEditImages, i)" />
+                    <span v-if="i===8 && app.diaryEditImages.length>9" class="thumb-more" @click="openPreviewGallery(app.diaryEditImages, i)">+{{app.diaryEditImages.length-9}}</span>
+                    <button type="button" class="btn ghost" style="position:absolute;top:4px;right:4px;padding:2px 6px;z-index:2" @click.stop="removeDiaryImage(i)">✕</button>
                   </div>
                 </section>
               </div>
@@ -1642,8 +1946,10 @@ createApp({
           <template v-else>
           <h2>{{diaryData.caption}}</h2>
           <p class="hint">{{diaryData.user}} · {{diaryData.location}} · {{diaryData.checkin}}</p>
-          <section class="diary-grid">
-            <img v-for="(img,i) in diaryData.images" :key="i" :src="img" @click="app.previewSrc=img; $refs.pv.showModal()" />
+          <section class="diary-grid diary-grid-nine">
+            <button type="button" class="thumb-tile" v-for="(img,i) in diaryData.images" :key="i" @click="openPreviewGallery(diaryData.images, i)">
+              <img :src="img" />
+            </button>
           </section>
           <div class="row" style="margin-top:8px">
             <button class="btn" :class="{liked:isDiaryLikedByMe(diaryData)}" @click="toggleDiaryLike(diaryData)">👍 {{diaryData.likes?.length || 0}}</button>
@@ -1714,8 +2020,8 @@ createApp({
         <section class="card full">
           <div class="row" style="justify-content:space-between"><h2>{{t('messageCenter')}}</h2><div class="row"><button class="btn ghost" @click="app.groupDialog.show=true">发起群聊</button><button class="btn ghost" @click="markAllAsRead">{{t('markRead')}}</button></div></div>
           <div class="row msg-tabs" style="margin-bottom:10px">
-            <button class="btn ghost" :class="{active: app.activeMsgTab==='chats'}" @click="app.activeMsgTab='chats'">{{t('chatMsg')}}</button>
-            <button class="btn ghost" :class="{active: app.activeMsgTab==='system'}" @click="app.activeMsgTab='system'">{{t('sysMsg')}}</button>
+            <button class="btn ghost" :class="{active: app.activeMsgTab==='chats'}" @click="app.activeMsgTab='chats'">{{t('chatMsg')}}<span v-if="unreadChatCount" class="tab-unread-badge">{{unreadChatCount > 99 ? '99+' : unreadChatCount}}</span></button>
+            <button class="btn ghost" :class="{active: app.activeMsgTab==='system'}" @click="app.activeMsgTab='system'">{{t('sysMsg')}}<span v-if="unreadSystemCount" class="tab-unread-badge">{{unreadSystemCount > 99 ? '99+' : unreadSystemCount}}</span></button>
           </div>
           <div>
             <template v-if="app.activeMsgTab==='chats'">
@@ -1752,13 +2058,44 @@ createApp({
             <article class="trip"><strong>{{t('newDiaries7d')}}</strong><p class="meta">{{adminStats.newDiaries7d}}</p></article>
             <article class="trip"><strong>{{t('activeUsers7d')}}</strong><p class="meta">{{adminStats.activeUsers7d}}</p></article>
           </div>
+          <h4>用户反馈</h4>
+          <p class="hint" v-if="!adminStats.feedbacks.length">暂无用户反馈</p>
+          <div class="row" v-if="adminStats.feedbacks.length" style="justify-content:space-between;margin:.35rem 0 .6rem">
+            <small class="meta">第 {{app.feedbackPage}} / {{feedbackTotalPages}} 页（共 {{adminStats.feedbacks.length}} 条）</small>
+            <div class="row">
+              <button class="btn ghost" :disabled="app.feedbackPage<=1" @click="app.feedbackPage=Math.max(1, app.feedbackPage-1)">上一页</button>
+              <button class="btn ghost" :disabled="app.feedbackPage>=feedbackTotalPages" @click="app.feedbackPage=Math.min(feedbackTotalPages, app.feedbackPage+1)">下一页</button>
+            </div>
+          </div>
+          <article class="trip" v-for="fb in feedbackPaged" :key="fb.id">
+            <strong>{{fb.payload?.from || 'guest'}} · {{fb.payload?.email || '-'}}</strong>
+            <p>{{fb.payload?.content || '-'}}</p>
+            <p class="meta">{{fmt(fb.createdAt)}}</p>
+          </article>
           <h4>{{t('recentEvents')}}</h4>
           <article class="trip" v-for="e in adminStats.events" :key="e.id"><strong>{{e.type}}</strong><p class="meta">{{fmt(e.createdAt)}} · {{JSON.stringify(e.payload)}}</p></article>
         </section>
       </template>
     </main>
 
-    <dialog ref="pv"><img :src="app.previewSrc" style="max-width:88vw;max-height:80vh;border-radius:10px" /><div class="row" style="justify-content:flex-end;margin-top:8px"><button class="btn ghost" @click="$refs.pv.close()">{{t('close')}}</button></div></dialog>
+    <dialog v-if="app.feedbackSuccessVisible" open class="feedback-success-dialog">
+      <div class="feedback-success-card">
+        <h3>反馈提交成功</h3>
+        <p>感谢反馈，我们已收到你的建议！</p>
+        <div class="row" style="justify-content:flex-end"><button class="btn" @click="app.feedbackSuccessVisible=false">我知道了</button></div>
+      </div>
+    </dialog>
+    <dialog ref="pv" class="image-preview-dialog">
+      <div class="image-preview-wrap">
+        <button class="image-preview-close" type="button" aria-label="关闭预览" @click="$refs.pv.close()">✕</button>
+        <img :src="app.previewSrc" style="max-width:88vw;max-height:80vh;border-radius:10px" />
+        <div class="image-preview-toolbar" v-if="app.previewList.length>1">
+          <button class="btn ghost" type="button" @click="previewPrev">上一张</button>
+          <small class="meta">{{app.previewIndex + 1}} / {{app.previewList.length}}</small>
+          <button class="btn ghost" type="button" @click="previewNext">下一张</button>
+        </div>
+      </div>
+    </dialog>
     <aside v-if="app.followDialog.show" class="follow-panel">
       <div class="follow-panel-card">
         <div class="row" style="justify-content:space-between">

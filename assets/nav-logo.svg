@@ -1,0 +1,20 @@
+<svg width="436" height="95" viewBox="0 0 436 95" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">浪漫之旅 Romantic Journey</title>
+  <desc id="desc">导航栏品牌 Logo</desc>
+  <rect x="1.5" y="1.5" width="433" height="92" rx="20" fill="#081330" stroke="#B46BFF" stroke-width="3"/>
+  <text x="20" y="44" fill="#FF58BE" font-size="52" font-family="'PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif" font-weight="700">浪漫之旅</text>
+  <text x="22" y="75" fill="#D8B8FF" font-size="42" font-family="'Georgia','Times New Roman',serif" font-weight="600">Romantic Journey</text>
+  <path d="M383.5 61.5C397.6 61.5 409 50.1 409 36C409 21.9 397.6 10.5 383.5 10.5C369.4 10.5 358 21.9 358 36C358 50.1 369.4 61.5 383.5 61.5Z" fill="url(#pinGrad)"/>
+  <path d="M383.5 82C383.5 82 367 60.3 367 46.1C367 36.9 374.3 29.6 383.5 29.6C392.7 29.6 400 36.9 400 46.1C400 60.3 383.5 82 383.5 82Z" fill="url(#pinDrop)"/>
+  <circle cx="383.5" cy="45.5" r="6.6" fill="#CFE1FF"/>
+  <defs>
+    <linearGradient id="pinGrad" x1="358" y1="10.5" x2="409" y2="61.5" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#6BB2FF"/>
+      <stop offset="1" stop-color="#2563EB"/>
+    </linearGradient>
+    <linearGradient id="pinDrop" x1="367" y1="29.6" x2="400" y2="82" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#6FAEFF"/>
+      <stop offset="1" stop-color="#3B82F6"/>
+    </linearGradient>
+  </defs>
+</svg>

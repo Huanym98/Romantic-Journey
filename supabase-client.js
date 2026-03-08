@@ -1,13 +1,16 @@
 (function initRomanticJourneySupabase(global) {
   const URL_KEY = 'romanticJourneySupabaseUrl';
   const ANON_KEY = 'romanticJourneySupabaseAnonKey';
+  const STORAGE_BUCKET_KEY = 'romanticJourneySupabaseBucket';
+  const DEFAULT_STORAGE_BUCKET = 'Trip_Photos';
   const userIdCache = new Map();
 
   function normalizeConfig() {
     const fromWindow = global.SUPABASE_CONFIG || {};
     const url = String(fromWindow.url || localStorage.getItem(URL_KEY) || '').trim();
     const anonKey = String(fromWindow.anonKey || localStorage.getItem(ANON_KEY) || '').trim();
-    return { url, anonKey };
+    const storageBucket = String(fromWindow.storageBucket || localStorage.getItem(STORAGE_BUCKET_KEY) || DEFAULT_STORAGE_BUCKET).trim();
+    return { url, anonKey, storageBucket };
   }
 
   function isEnabled() {
@@ -15,9 +18,54 @@
     return Boolean(url && anonKey);
   }
 
-  function setConfig(url, anonKey) {
+  function setConfig(url, anonKey, storageBucket) {
     localStorage.setItem(URL_KEY, String(url || '').trim());
     localStorage.setItem(ANON_KEY, String(anonKey || '').trim());
+    if (typeof storageBucket !== 'undefined') localStorage.setItem(STORAGE_BUCKET_KEY, String(storageBucket || '').trim());
+  }
+
+  function extFromFileName(name, fallback = 'jpg') {
+    const value = String(name || '');
+    const idx = value.lastIndexOf('.');
+    if (idx < 0) return fallback;
+    return value.slice(idx + 1).toLowerCase().replace(/[^a-z0-9]/g, '') || fallback;
+  }
+
+  function safePathPart(value) {
+    return String(value || '').trim().replace(/[^a-zA-Z0-9_-]/g, '_') || 'unknown';
+  }
+
+  async function uploadDiaryImage(file, options = {}) {
+    if (!file) throw new Error('file is required');
+    const { url, anonKey, storageBucket } = normalizeConfig();
+    if (!url || !anonKey) throw new Error('Supabase config missing');
+    const nickname = safePathPart(options.nickname || 'guest');
+    const batchId = safePathPart(options.batchId || Date.now());
+    const index = Number(options.index || 0);
+    const ext = extFromFileName(file.name, file.type?.includes('png') ? 'png' : 'jpg');
+    const objectPath = `${nickname}/${batchId}/${Date.now()}_${index}.${ext}`;
+    const encodedPath = objectPath.split('/').map((s) => encodeURIComponent(s)).join('/');
+    const response = await fetch(`${url}/storage/v1/object/${encodeURIComponent(storageBucket)}/${encodedPath}`, {
+      method: 'POST',
+      headers: {
+        apikey: anonKey,
+        Authorization: `Bearer ${anonKey}`,
+        'x-upsert': 'false',
+        'Content-Type': file.type || 'application/octet-stream'
+      },
+      body: file
+    });
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`Supabase storage ${response.status}: ${text}`);
+    }
+    const publicUrl = `${url}/storage/v1/object/public/${encodeURIComponent(storageBucket)}/${encodedPath}`;
+    return {
+      bucket: storageBucket,
+      path: objectPath,
+      url: publicUrl,
+      size: Number(file.size || 0)
+    };
   }
 
   async function request(path, options = {}) {
@@ -400,6 +448,8 @@
   global.RJSupabase = {
     URL_KEY,
     ANON_KEY,
+    STORAGE_BUCKET_KEY,
+    DEFAULT_STORAGE_BUCKET,
     normalizeConfig,
     setConfig,
     isEnabled,
@@ -422,6 +472,7 @@
     syncTripCommentLike,
     syncMediaCommentLike,
     syncNoticeState,
-    syncAdminEvent
+    syncAdminEvent,
+    uploadDiaryImage
   };
 })(window);

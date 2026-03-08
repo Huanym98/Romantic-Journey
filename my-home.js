@@ -119,19 +119,25 @@ mediaForm?.addEventListener('submit', async (event) => {
 
   const payload = [];
   const diaryBatchId = crypto.randomUUID();
-  for (const [index, file] of allowed.entries()) {
-    payload.push({
-      id: crypto.randomUUID(),
-      type,
-      location,
-      cover: await fileToDataUrl(file),
-      caption: type === '图片' && allowed.length > 1 ? `${caption} · ${index + 1}` : caption,
-      createdAt: new Date().toISOString(),
-      checkin: checkin || `${location} · ${formatTime(new Date().toISOString())}`,
-      user: currentUser,
-      likes: [],
-      batchId: diaryBatchId
-    });
+  try {
+    for (const [index, file] of allowed.entries()) {
+      const coverUrl = await uploadMediaFileToStorage(file, diaryBatchId, index);
+      payload.push({
+        id: crypto.randomUUID(),
+        type,
+        location,
+        cover: coverUrl,
+        caption: type === '图片' && allowed.length > 1 ? `${caption} · ${index + 1}` : caption,
+        createdAt: new Date().toISOString(),
+        checkin: checkin || `${location} · ${formatTime(new Date().toISOString())}`,
+        user: currentUser,
+        likes: [],
+        batchId: diaryBatchId
+      });
+    }
+  } catch (error) {
+    alert(`上传图片失败：${error?.message || error}`);
+    return;
   }
 
   state.mediaPosts = [...payload, ...state.mediaPosts].slice(0, 30);
@@ -222,6 +228,19 @@ async function syncProfileToSupabase() {
   } catch (error) {
     console.error('[supabase-sync] my-home profile failed', error);
   }
+}
+
+
+async function uploadMediaFileToStorage(file, batchId, index) {
+  if (!supabaseClient?.isEnabled?.() || typeof supabaseClient.uploadDiaryImage !== 'function') {
+    throw new Error('Supabase Storage 未配置');
+  }
+  const result = await supabaseClient.uploadDiaryImage(file, {
+    nickname: currentUser,
+    batchId,
+    index
+  });
+  return result?.url || '';
 }
 
 async function syncMediaPostToSupabase(post) {

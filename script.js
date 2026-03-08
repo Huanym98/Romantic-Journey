@@ -337,17 +337,23 @@ mediaForm?.addEventListener('submit', async (event) => {
 
   const payload = [];
   const diaryBatchId = crypto.randomUUID();
-  for (const [index, file] of allowed.entries()) {
-    payload.push({
-      id: crypto.randomUUID(), type, location,
-      cover: await fileToDataUrl(file),
-      caption: type === '图片' && allowed.length > 1 ? `${caption} · ${index + 1}` : caption,
-      createdAt: new Date().toISOString(),
-      checkin: checkin || `${location} · ${formatTime(new Date().toISOString())}`,
-      user: currentNicknameAuth,
-      likes: [],
-      batchId: diaryBatchId
-    });
+  try {
+    for (const [index, file] of allowed.entries()) {
+      const coverUrl = await uploadMediaFileToStorage(file, diaryBatchId, index);
+      payload.push({
+        id: crypto.randomUUID(), type, location,
+        cover: coverUrl,
+        caption: type === '图片' && allowed.length > 1 ? `${caption} · ${index + 1}` : caption,
+        createdAt: new Date().toISOString(),
+        checkin: checkin || `${location} · ${formatTime(new Date().toISOString())}`,
+        user: currentNicknameAuth,
+        likes: [],
+        batchId: diaryBatchId
+      });
+    }
+  } catch (error) {
+    alert(`上传图片失败：${error?.message || error}`);
+    return;
   }
   state.mediaPosts = [...payload, ...state.mediaPosts].slice(0, 20);
   recordAdminEvent('publish-diary', { count: payload.length });
@@ -909,6 +915,9 @@ function toggleFollow(target) {
   const adding = !set.has(target);
   if (!adding) set.delete(target); else set.add(target);
   social.follows[currentNicknameAuth] = [...set];
+  if (adding) {
+    addNotification(target, `${currentNicknameAuth} ${t('followNotice')}`, 'follow');
+  }
   void syncFollowToSupabase(target, adding);
 }
 function toggleBlock(target) {
@@ -1002,12 +1011,12 @@ function canDeleteComment(comment, trip) {
 
 function getNotifications(user) {
   const list = Array.isArray(social.notifications?.[user]) ? social.notifications[user] : [];
-  return list.filter((item) => ['trip-like', 'trip-comment', 'home-like'].includes(item?.type));
+  return list.filter((item) => ['trip-like', 'trip-comment', 'home-like', 'follow'].includes(item?.type));
 }
 function addNotification(user, title, type = 'general') {
   if (!user || user === currentNicknameAuth) return;
   if (!social.notifications || typeof social.notifications !== 'object') social.notifications = {};
-  if (!['trip-like', 'trip-comment', 'home-like'].includes(type)) return;
+  if (!['trip-like', 'trip-comment', 'home-like', 'follow'].includes(type)) return;
   const list = getNotifications(user);
   social.notifications[user] = [...list, { id: crypto.randomUUID(), title, type, createdAt: new Date().toISOString() }].slice(-80);
   persistSocial();
@@ -1117,6 +1126,18 @@ async function syncTripCommentToSupabase(tripId, comment) {
   } catch (error) {
     console.error('[supabase-sync] trip comment failed', error);
   }
+}
+
+async function uploadMediaFileToStorage(file, batchId, index) {
+  if (!supabaseClient?.isEnabled?.() || typeof supabaseClient.uploadDiaryImage !== 'function') {
+    throw new Error('Supabase Storage 未配置');
+  }
+  const result = await supabaseClient.uploadDiaryImage(file, {
+    nickname: currentNicknameAuth,
+    batchId,
+    index
+  });
+  return result?.url || '';
 }
 
 async function syncMediaPostToSupabase(post) {
