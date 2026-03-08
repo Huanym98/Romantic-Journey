@@ -104,10 +104,18 @@
   function setStoredAuthSession(session) {
     const normalized = normalizeSessionShape(session);
     if (!normalized?.access_token || !normalized?.refresh_token) {
+      console.error('[supabase-auth-debug] setStoredAuthSession skipped: invalid session shape');
       localStorage.removeItem(AUTH_SESSION_KEY);
       return;
     }
     localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(normalized));
+    const storedRaw = localStorage.getItem(AUTH_SESSION_KEY);
+    console.log('[supabase-auth-debug] setStoredAuthSession success', {
+      hasAccessToken: Boolean(normalized.access_token),
+      hasRefreshToken: Boolean(normalized.refresh_token),
+      storedLength: Number(storedRaw?.length || 0),
+      storedPreview: String(storedRaw || '').slice(0, 80) || null
+    });
   }
 
   function clearStoredAuthSession() {
@@ -117,6 +125,13 @@
   async function authRequest(path, body, accessToken) {
     const { url, anonKey } = normalizeConfig();
     if (!url || !anonKey) throw new Error('Supabase config missing');
+    if (String(path || '').startsWith('token?grant_type=password')) {
+      console.log('[supabase-auth-debug] /auth/v1/token request summary', {
+        hasEmail: Boolean(body?.email),
+        passwordLength: Number(String(body?.password || '').length),
+        url
+      });
+    }
     const response = await fetch(`${url}/auth/v1/${path}`, {
       method: 'POST',
       headers: {
@@ -128,6 +143,16 @@
     });
     const text = await response.text();
     const json = text ? JSON.parse(text) : null;
+    if (String(path || '').startsWith('token?grant_type=password')) {
+      console.log('[supabase-auth-debug] /auth/v1/token response', {
+        ok: response.ok,
+        status: response.status,
+        data: json || null,
+        error: response.ok ? null : (json?.msg || json?.error_description || json?.error || text || null),
+        hasAccessToken: Boolean(json?.access_token),
+        hasRefreshToken: Boolean(json?.refresh_token)
+      });
+    }
     if (!response.ok) throw new Error(json?.msg || json?.error_description || json?.error || `Supabase Auth ${response.status}`);
     return json;
   }
@@ -170,17 +195,31 @@
   async function signInWithLocalAccount(nickname, password) {
     if (!nickname || !password) throw new Error('nickname and password are required');
     const email = buildAuthEmailFromNickname(nickname);
+    console.log('[supabase-auth-debug] login flow start', { nickname, email });
     try {
       const session = await authRequest('token?grant_type=password', { email, password });
+      console.log('[supabase-auth-debug] token password grant success', {
+        hasAccessToken: Boolean(session?.access_token),
+        hasRefreshToken: Boolean(session?.refresh_token)
+      });
       setStoredAuthSession(session);
       await syncSessionToSupabaseClient(session);
       return session;
     } catch (error) {
+      console.error('[supabase-auth-debug] token password grant failed', error);
       const message = String(error?.message || '');
       const shouldCreate = /Invalid login credentials|Email not confirmed|User not found|invalid_grant/i.test(message);
       if (!shouldCreate) throw error;
-      await authRequest('signup', { email, password, data: { nickname } }).catch(() => null);
+      try {
+        await authRequest('signup', { email, password, data: { nickname } });
+      } catch (signupError) {
+        console.error('[supabase-auth-debug] signup failed before retry token', signupError);
+      }
       const session = await authRequest('token?grant_type=password', { email, password });
+      console.log('[supabase-auth-debug] token password grant success after signup', {
+        hasAccessToken: Boolean(session?.access_token),
+        hasRefreshToken: Boolean(session?.refresh_token)
+      });
       setStoredAuthSession(session);
       await syncSessionToSupabaseClient(session);
       return session;

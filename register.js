@@ -85,6 +85,7 @@ registerForm.addEventListener('submit', async (event) => {
   const form = new FormData(registerForm);
   const nickname = String(form.get('nickname') || '').trim();
   const password = String(form.get('password') || '').trim();
+  console.log('[supabase-auth-debug] register/login submit start', { nickname, passwordLength: Number(password.length) });
   if (!nickname || !password) return;
 
   const users = getUsers();
@@ -119,6 +120,23 @@ registerForm.addEventListener('submit', async (event) => {
   window.location.href = 'index.html';
 });
 
+
+function logStoredSupabaseSessionSummary() {
+  const raw = localStorage.getItem('romanticJourneySupabaseAuthSession');
+  let parsed = null;
+  try { parsed = raw ? JSON.parse(raw) : null; } catch (error) { console.error('[supabase-auth-debug] stored session parse failed in register.js', error); }
+  const hasAccessToken = Boolean(parsed?.access_token || parsed?.session?.access_token || parsed?.data?.session?.access_token);
+  const hasRefreshToken = Boolean(parsed?.refresh_token || parsed?.session?.refresh_token || parsed?.data?.session?.refresh_token);
+  console.log('[supabase-auth-debug] localStorage romanticJourneySupabaseAuthSession summary', {
+    exists: Boolean(raw),
+    length: Number(raw?.length || 0),
+    hasAccessToken,
+    hasRefreshToken,
+    preview: String(raw || '').slice(0, 80) || null
+  });
+  return { hasAccessToken, hasRefreshToken };
+}
+
 function getUsers() {
   try {
     const parsed = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
@@ -151,7 +169,15 @@ function validatePasswordComplexity(password) {
 async function ensureSupabaseSession(nickname, password) {
   if (!supabaseClient?.isEnabled?.() || typeof supabaseClient.signInWithLocalAccount !== 'function') return;
   try {
-    await supabaseClient.signInWithLocalAccount(nickname, password);
+    const session = await supabaseClient.signInWithLocalAccount(nickname, password);
+    console.log('[supabase-auth-debug] ensureSupabaseSession token result', {
+      hasAccessToken: Boolean(session?.access_token),
+      hasRefreshToken: Boolean(session?.refresh_token)
+    });
+    const summary = logStoredSupabaseSessionSummary();
+    if (!summary.hasAccessToken || !summary.hasRefreshToken) {
+      throw new Error('Supabase session 未写入 localStorage');
+    }
   } catch (error) {
     console.error('[supabase-auth] sign in failed', error);
     message.textContent = `Supabase 会话建立失败：${error.message}`;
