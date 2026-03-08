@@ -2,6 +2,7 @@
   const URL_KEY = 'romanticJourneySupabaseUrl';
   const ANON_KEY = 'romanticJourneySupabaseAnonKey';
   const STORAGE_BUCKET_KEY = 'romanticJourneySupabaseBucket';
+  const AUTH_SESSION_KEY = 'romanticJourneySupabaseAuthSession';
   const DEFAULT_STORAGE_BUCKET = 'Trip_Photos';
   const userIdCache = new Map();
 
@@ -35,30 +36,185 @@
     return String(value || '').trim().replace(/[^a-zA-Z0-9_-]/g, '_') || 'unknown';
   }
 
+  function parseJwtPayload(token) {
+    try {
+      const part = String(token || '').split('.')[1] || '';
+      if (!part) return null;
+      const normalized = part.replace(/-/g, '+').replace(/_/g, '/');
+      const json = decodeURIComponent(atob(normalized).split('').map((ch) => `%${ch.charCodeAt(0).toString(16).padStart(2, '0')}`).join(''));
+      return JSON.parse(json);
+    } catch {
+      return null;
+    }
+  }
+
+  function getStoredAuthSession() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(AUTH_SESSION_KEY) || 'null');
+      return parsed && typeof parsed === 'object' ? parsed : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function setStoredAuthSession(session) {
+    if (!session || !session.access_token) {
+      localStorage.removeItem(AUTH_SESSION_KEY);
+      return;
+    }
+    localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(session));
+  }
+
+  function clearStoredAuthSession() {
+    localStorage.removeItem(AUTH_SESSION_KEY);
+  }
+
+  async function authRequest(path, body, accessToken) {
+    const { url, anonKey } = normalizeConfig();
+    if (!url || !anonKey) throw new Error('Supabase config missing');
+    const response = await fetch(`${url}/auth/v1/${path}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: anonKey,
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
+      },
+      body: body ? JSON.stringify(body) : undefined
+    });
+    const text = await response.text();
+    const json = text ? JSON.parse(text) : null;
+    if (!response.ok) throw new Error(json?.msg || json?.error_description || json?.error || `Supabase Auth ${response.status}`);
+    return json;
+  }
+
+  function buildAuthEmailFromNickname(nickname) {
+    return `${safePathPart(nickname).toLowerCase()}@romantic-journey.local`;
+  }
+
+  async function signInWithLocalAccount(nickname, password) {
+    if (!nickname || !password) throw new Error('nickname and password are required');
+    const email = buildAuthEmailFromNickname(nickname);
+    try {
+      const session = await authRequest('token?grant_type=password', { email, password });
+      setStoredAuthSession(session);
+      return session;
+    } catch (error) {
+      const message = String(error?.message || '');
+      const shouldCreate = /Invalid login credentials|Email not confirmed|User not found|invalid_grant/i.test(message);
+      if (!shouldCreate) throw error;
+      await authRequest('signup', { email, password, data: { nickname } }).catch(() => null);
+      const session = await authRequest('token?grant_type=password', { email, password });
+      setStoredAuthSession(session);
+      return session;
+    }
+  }
+
+  async function restoreSupabaseSession() {
+    const stored = getStoredAuthSession();
+    if (!stored?.access_token) return null;
+    const payload = parseJwtPayload(stored.access_token);
+    const expMs = Number(payload?.exp || 0) * 1000;
+    const now = Date.now();
+    if (expMs && now < expMs - 30_000) return stored;
+    if (!stored.refresh_token) {
+      clearStoredAuthSession();
+      return null;
+    }
+    try {
+      const refreshed = await authRequest('token?grant_type=refresh_token', { refresh_token: stored.refresh_token });
+      setStoredAuthSession(refreshed);
+      return refreshed;
+    } catch {
+      clearStoredAuthSession();
+      return null;
+    }
+  }
+
+  async function signOutSupabaseSession() {
+    const session = getStoredAuthSession();
+    try {
+      if (session?.access_token) await authRequest('logout', null, session.access_token);
+    } catch {
+      // ignore signout network errors
+    }
+    clearStoredAuthSession();
+  }
+
+  function getAuthDebugResult() {
+    const session = getStoredAuthSession();
+    const user = session?.user || null;
+    return {
+      getUser: { data: { user }, error: null },
+      getSession: { data: { session }, error: null },
+      user,
+      session
+    };
+  }
+
   async function uploadDiaryImage(file, options = {}) {
     if (!file) throw new Error('file is required');
     const { url, anonKey, storageBucket } = normalizeConfig();
     if (!url || !anonKey) throw new Error('Supabase config missing');
-    const nickname = safePathPart(options.nickname || 'guest');
-    const batchId = safePathPart(options.batchId || Date.now());
-    const index = Number(options.index || 0);
-    const ext = extFromFileName(file.name, file.type?.includes('png') ? 'png' : 'jpg');
-    const objectPath = `${nickname}/${batchId}/${Date.now()}_${index}.${ext}`;
+
+    await restoreSupabaseSession();
+    const authState = getAuthDebugResult();
+    console.log('[supabase-upload-debug] auth.getUser', authState.getUser);
+    console.log('[supabase-upload-debug] auth.getSession', authState.getSession);
+
+    const user = authState.user;
+    const session = authState.session;
+    if (!session?.access_token) {
+      throw new Error('当前未登录 Supabase，无法上传图片');
+    }
+
+    const tokenPayload = parseJwtPayload(session.access_token) || {};
+    const tokenSub = String(tokenPayload.sub || '').trim();
+    const sessionUserId = String(user?.id || '').trim();
+    const resolvedUserId = tokenSub || sessionUserId;
+    if (!resolvedUserId) {
+      throw new Error('当前未登录 Supabase，无法上传图片');
+    }
+
+    if (tokenSub && sessionUserId && tokenSub !== sessionUserId) {
+      console.warn('[supabase-upload-debug] user id mismatch, force use token.sub', { tokenSub, sessionUserId });
+    }
+
+    if (storageBucket !== 'Trip_Photos') {
+      console.warn('[supabase-upload-debug] bucket mismatch, expected "Trip_Photos"', { storageBucket });
+    }
+
+    const objectPath = `${resolvedUserId}/${Date.now()}-${file.name}`;
+    const filePathFirstDir = String(objectPath.split('/')[0] || '').trim();
+    const isSubMatchedPath = Boolean(tokenSub) && tokenSub === filePathFirstDir;
+    console.log('[supabase-upload-debug] token.sub', tokenSub || null);
+    console.log('[supabase-upload-debug] session.user.id', sessionUserId || null);
+    console.log('[supabase-upload-debug] token.sub===filePathDir', isSubMatchedPath);
+    console.log('[supabase-upload-debug] bucket', storageBucket);
+    console.log('[supabase-upload-debug] filePath', objectPath);
+
     const encodedPath = objectPath.split('/').map((s) => encodeURIComponent(s)).join('/');
-    const response = await fetch(`${url}/storage/v1/object/${encodeURIComponent(storageBucket)}/${encodedPath}`, {
+    const uploadUrl = `${url}/storage/v1/object/${encodeURIComponent(storageBucket)}/${encodedPath}`;
+    console.log('[supabase-upload-debug] uploadUrl', uploadUrl);
+    const response = await fetch(uploadUrl, {
       method: 'POST',
       headers: {
         apikey: anonKey,
-        Authorization: `Bearer ${anonKey}`,
+        Authorization: `Bearer ${session.access_token}`,
         'x-upsert': 'false',
         'Content-Type': file.type || 'application/octet-stream'
       },
       body: file
     });
+    let uploadData = null;
+    let uploadError = null;
     if (!response.ok) {
       const text = await response.text();
-      throw new Error(`Supabase storage ${response.status}: ${text}`);
+      uploadError = `Supabase storage ${response.status}: ${text}`;
+      console.log('[supabase-upload-debug] storage upload result', { data: uploadData, error: uploadError });
+      throw new Error(uploadError);
     }
+    uploadData = await response.json().catch(() => null);
+    console.log('[supabase-upload-debug] storage upload result', { data: uploadData, error: uploadError });
     const publicUrl = `${url}/storage/v1/object/public/${encodeURIComponent(storageBucket)}/${encodedPath}`;
     return {
       bucket: storageBucket,
@@ -449,10 +605,14 @@
     URL_KEY,
     ANON_KEY,
     STORAGE_BUCKET_KEY,
+    AUTH_SESSION_KEY,
     DEFAULT_STORAGE_BUCKET,
     normalizeConfig,
     setConfig,
     isEnabled,
+    signInWithLocalAccount,
+    restoreSupabaseSession,
+    signOutSupabaseSession,
     findUserByNickname,
     createUserWithProfile,
     ensureUser,
@@ -475,4 +635,6 @@
     syncAdminEvent,
     uploadDiaryImage
   };
+
+  void restoreSupabaseSession();
 })(window);

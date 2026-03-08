@@ -95,6 +95,7 @@ registerForm.addEventListener('submit', async (event) => {
       message.textContent = t('wrongPassword');
       return;
     }
+    await ensureSupabaseSession(nickname, password);
     localStorage.setItem(CURRENT_USER_KEY, existing.nickname);
     window.location.href = 'index.html';
     return;
@@ -112,6 +113,7 @@ registerForm.addEventListener('submit', async (event) => {
   localStorage.setItem(USERS_KEY, JSON.stringify(users));
 
   await syncUserToSupabase({ nickname, password });
+  await ensureSupabaseSession(nickname, password);
 
   localStorage.setItem(CURRENT_USER_KEY, nickname);
   window.location.href = 'index.html';
@@ -144,6 +146,18 @@ function validatePasswordComplexity(password) {
   return { ok: true, message: '' };
 }
 
+
+
+async function ensureSupabaseSession(nickname, password) {
+  if (!supabaseClient?.isEnabled?.() || typeof supabaseClient.signInWithLocalAccount !== 'function') return;
+  try {
+    await supabaseClient.signInWithLocalAccount(nickname, password);
+  } catch (error) {
+    console.error('[supabase-auth] sign in failed', error);
+    message.textContent = `Supabase 会话建立失败：${error.message}`;
+    throw error;
+  }
+}
 
 async function syncUserToSupabase(user) {
   if (!supabaseClient?.isEnabled?.()) return;
