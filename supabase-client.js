@@ -2,7 +2,6 @@
   const URL_KEY = 'romanticJourneySupabaseUrl';
   const ANON_KEY = 'romanticJourneySupabaseAnonKey';
   const STORAGE_BUCKET_KEY = 'romanticJourneySupabaseBucket';
-  const AUTH_SESSION_KEY = 'romanticJourneySupabaseAuthSession';
   const DEFAULT_STORAGE_BUCKET = 'Trip_Photos';
   const userIdCache = new Map();
   let supabaseClientInstance = null;
@@ -66,205 +65,71 @@
     return String(value || '').trim().replace(/[^a-zA-Z0-9_-]/g, '_') || 'unknown';
   }
 
-  function parseJwtPayload(token) {
-    try {
-      const part = String(token || '').split('.')[1] || '';
-      if (!part) return null;
-      const normalized = part.replace(/-/g, '+').replace(/_/g, '/');
-      const json = decodeURIComponent(atob(normalized).split('').map((ch) => `%${ch.charCodeAt(0).toString(16).padStart(2, '0')}`).join(''));
-      return JSON.parse(json);
-    } catch {
-      return null;
-    }
-  }
-
-  function normalizeSessionShape(raw) {
-    if (!raw || typeof raw !== 'object') return null;
-    if (raw.access_token && raw.refresh_token) return raw;
-    const nested = raw.session || raw.currentSession || raw.data?.session || null;
-    if (nested?.access_token && nested?.refresh_token) return nested;
-    return null;
-  }
-
-  function getStoredAuthSession() {
-    const rawText = localStorage.getItem(AUTH_SESSION_KEY);
-    console.log('[supabase-auth-debug] stored session raw', rawText || null);
-    try {
-      const parsed = JSON.parse(rawText || 'null');
-      const normalized = normalizeSessionShape(parsed);
-      console.log('[supabase-auth-debug] stored session parsed hasAccessToken', Boolean(normalized?.access_token));
-      console.log('[supabase-auth-debug] stored session parsed hasRefreshToken', Boolean(normalized?.refresh_token));
-      return normalized;
-    } catch (error) {
-      console.error('[supabase-auth-debug] stored session parse failed', error);
-      return null;
-    }
-  }
-
-  function setStoredAuthSession(session) {
-    const normalized = normalizeSessionShape(session);
-    if (!normalized?.access_token || !normalized?.refresh_token) {
-      console.error('[supabase-auth-debug] setStoredAuthSession skipped: invalid session shape');
-      localStorage.removeItem(AUTH_SESSION_KEY);
-      return;
-    }
-    localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(normalized));
-    const storedRaw = localStorage.getItem(AUTH_SESSION_KEY);
-    console.log('[supabase-auth-debug] setStoredAuthSession success', {
-      hasAccessToken: Boolean(normalized.access_token),
-      hasRefreshToken: Boolean(normalized.refresh_token),
-      storedLength: Number(storedRaw?.length || 0),
-      storedPreview: String(storedRaw || '').slice(0, 80) || null
-    });
-  }
-
-  function clearStoredAuthSession() {
-    localStorage.removeItem(AUTH_SESSION_KEY);
-  }
-
-  async function authRequest(path, body, accessToken) {
-    const { url, anonKey } = normalizeConfig();
-    if (!url || !anonKey) throw new Error('Supabase config missing');
-    if (String(path || '').startsWith('token?grant_type=password')) {
-      console.log('[supabase-auth-debug] /auth/v1/token request summary', {
-        hasEmail: Boolean(body?.email),
-        passwordLength: Number(String(body?.password || '').length),
-        url
-      });
-    }
-    const response = await fetch(`${url}/auth/v1/${path}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: anonKey,
-        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
-      },
-      body: body ? JSON.stringify(body) : undefined
-    });
-    const text = await response.text();
-    const json = text ? JSON.parse(text) : null;
-    if (String(path || '').startsWith('token?grant_type=password')) {
-      console.log('[supabase-auth-debug] /auth/v1/token response', {
-        ok: response.ok,
-        status: response.status,
-        data: json || null,
-        error: response.ok ? null : (json?.msg || json?.error_description || json?.error || text || null),
-        hasAccessToken: Boolean(json?.access_token),
-        hasRefreshToken: Boolean(json?.refresh_token)
-      });
-    }
-    if (!response.ok) throw new Error(json?.msg || json?.error_description || json?.error || `Supabase Auth ${response.status}`);
-    return json;
-  }
-
   function buildAuthEmailFromNickname(nickname) {
-    return `${safePathPart(nickname).toLowerCase()}@romantic-journey.local`;
+    return `${safePathPart(nickname).toLowerCase()}@romanticjourney.app`;
   }
 
-  async function syncSessionToSupabaseClient(session) {
+  async function signUpWithLocalAccount(nickname, password) {
+    if (!nickname || !password) throw new Error('nickname and password are required');
     const client = getSupabaseClient();
-    if (!client?.auth?.setSession) {
-      console.error('[supabase-auth-debug] setSession unavailable: client/auth not ready');
-      return null;
-    }
-    const target = normalizeSessionShape(session) || getStoredAuthSession();
-    console.log('[supabase-auth-debug] setSession input summary', {
-      hasAccessToken: Boolean(target?.access_token),
-      hasRefreshToken: Boolean(target?.refresh_token),
-      accessTokenPrefix: String(target?.access_token || '').slice(0, 16) || null,
-      refreshTokenPrefix: String(target?.refresh_token || '').slice(0, 16) || null
+    if (!client?.auth?.signUp) throw new Error('Supabase SDK 未加载，无法注册');
+    const email = buildAuthEmailFromNickname(nickname);
+    console.log('[supabase-auth] signUp start', { nickname, email });
+    const result = await client.auth.signUp({ email, password });
+    console.log('[supabase-auth] signUp result', {
+      data: {
+        userId: result?.data?.user?.id || null,
+        hasSession: Boolean(result?.data?.session)
+      },
+      error: result?.error || null
     });
-    if (!target?.access_token || !target?.refresh_token) {
-      console.error('[supabase-auth-debug] setSession skipped: missing access_token or refresh_token');
-      return null;
-    }
-    const result = await client.auth.setSession({
-      access_token: target.access_token,
-      refresh_token: target.refresh_token
-    });
-    console.log('[supabase-auth-debug] setSession result', { data: result?.data || null, error: result?.error || null });
-    if (result?.error) {
-      console.error('[supabase-auth-debug] setSession failed', result.error);
-      throw result.error;
-    }
-    const sessionAfter = await client.auth.getSession();
-    console.log('[supabase-auth-debug] getSession after setSession', sessionAfter);
-    return result?.data?.session || target;
+    if (result?.error) throw result.error;
+    return result?.data || null;
   }
 
   async function signInWithLocalAccount(nickname, password) {
     if (!nickname || !password) throw new Error('nickname and password are required');
+    const client = getSupabaseClient();
+    if (!client?.auth?.signInWithPassword) throw new Error('Supabase SDK 未加载，无法登录');
     const email = buildAuthEmailFromNickname(nickname);
-    console.log('[supabase-auth-debug] login flow start', { nickname, email });
-    try {
-      const session = await authRequest('token?grant_type=password', { email, password });
-      console.log('[supabase-auth-debug] token password grant success', {
-        hasAccessToken: Boolean(session?.access_token),
-        hasRefreshToken: Boolean(session?.refresh_token)
-      });
-      setStoredAuthSession(session);
-      await syncSessionToSupabaseClient(session);
-      return session;
-    } catch (error) {
-      console.error('[supabase-auth-debug] token password grant failed', error);
-      const message = String(error?.message || '');
-      const shouldCreate = /Invalid login credentials|Email not confirmed|User not found|invalid_grant/i.test(message);
-      if (!shouldCreate) throw error;
-      try {
-        await authRequest('signup', { email, password, data: { nickname } });
-      } catch (signupError) {
-        console.error('[supabase-auth-debug] signup failed before retry token', signupError);
-      }
-      const session = await authRequest('token?grant_type=password', { email, password });
-      console.log('[supabase-auth-debug] token password grant success after signup', {
-        hasAccessToken: Boolean(session?.access_token),
-        hasRefreshToken: Boolean(session?.refresh_token)
-      });
-      setStoredAuthSession(session);
-      await syncSessionToSupabaseClient(session);
-      return session;
+    console.log('[supabase-auth] signIn start', { nickname, email });
+    const result = await client.auth.signInWithPassword({ email, password });
+    console.log('[supabase-auth] signIn result', {
+      data: {
+        userId: result?.data?.user?.id || null,
+        hasSession: Boolean(result?.data?.session),
+        accessToken: Boolean(result?.data?.session?.access_token),
+        refreshToken: Boolean(result?.data?.session?.refresh_token)
+      },
+      error: result?.error || null
+    });
+    if (result?.error) throw result.error;
+    if (!result?.data?.session?.access_token || !result?.data?.session?.refresh_token) {
+      throw new Error('Supabase 登录成功但未返回 session（可能开启了邮箱确认）');
     }
+    return result.data.session;
+  }
+
+  async function getSupabaseAuthSession() {
+    const client = getSupabaseClient();
+    if (!client?.auth?.getSession) return null;
+    const sessionResult = await client.auth.getSession();
+    console.log('[supabase-auth] getSession', sessionResult);
+    return sessionResult?.data?.session || null;
   }
 
   async function restoreSupabaseSession() {
-    const stored = getStoredAuthSession();
-    if (!stored?.access_token) return null;
-    const payload = parseJwtPayload(stored.access_token);
-    const expMs = Number(payload?.exp || 0) * 1000;
-    const now = Date.now();
-    if (expMs && now < expMs - 30_000) {
-      await syncSessionToSupabaseClient(stored);
-      return stored;
-    }
-    if (!stored.refresh_token) {
-      clearStoredAuthSession();
-      return null;
-    }
-    try {
-      const refreshed = await authRequest('token?grant_type=refresh_token', { refresh_token: stored.refresh_token });
-      setStoredAuthSession(refreshed);
-      await syncSessionToSupabaseClient(refreshed);
-      return refreshed;
-    } catch {
-      clearStoredAuthSession();
-      return null;
-    }
+    return getSupabaseAuthSession();
   }
 
   async function signOutSupabaseSession() {
-    const session = getStoredAuthSession();
     const client = getSupabaseClient();
-    try {
-      if (session?.access_token) await authRequest('logout', null, session.access_token);
-    } catch {
-      // ignore signout network errors
+    if (!client?.auth?.signOut) return;
+    const result = await client.auth.signOut();
+    if (result?.error) {
+      console.error('[supabase-auth] signOut failed', result.error);
+      throw result.error;
     }
-    try {
-      if (client?.auth?.signOut) await client.auth.signOut();
-    } catch {
-      // ignore sdk signout errors
-    }
-    clearStoredAuthSession();
   }
 
   async function uploadDiaryImage(file, options = {}) {
@@ -289,16 +154,9 @@
       throw new Error('当前未登录 Supabase，无法上传图片');
     }
 
-    const tokenPayload = parseJwtPayload(session.access_token) || {};
-    const tokenSub = String(tokenPayload.sub || '').trim();
-    const sessionUserId = String(user?.id || '').trim();
     const resolvedUserId = String(user.id || '').trim();
     if (!resolvedUserId) {
       throw new Error('当前未登录 Supabase，无法上传图片');
-    }
-
-    if (tokenSub && tokenSub !== resolvedUserId) {
-      console.warn('[supabase-upload-debug] token.sub and user.id mismatch', { tokenSub, userId: resolvedUserId });
     }
 
     if (storageBucket !== 'Trip_Photos') {
@@ -306,11 +164,6 @@
     }
 
     const objectPath = `${resolvedUserId}/${Date.now()}-${file.name}`;
-    const filePathFirstDir = String(objectPath.split('/')[0] || '').trim();
-    const isSubMatchedPath = Boolean(tokenSub) && tokenSub === filePathFirstDir;
-    console.log('[supabase-upload-debug] token.sub', tokenSub || null);
-    console.log('[supabase-upload-debug] session.user.id', sessionUserId || null);
-    console.log('[supabase-upload-debug] token.sub===filePathDir', isSubMatchedPath);
     console.log('[supabase-upload-debug] bucket', storageBucket);
     console.log('[supabase-upload-debug] filePath', objectPath);
 
@@ -727,13 +580,14 @@
     URL_KEY,
     ANON_KEY,
     STORAGE_BUCKET_KEY,
-    AUTH_SESSION_KEY,
     DEFAULT_STORAGE_BUCKET,
     normalizeConfig,
     setConfig,
     isEnabled,
+    signUpWithLocalAccount,
     signInWithLocalAccount,
     restoreSupabaseSession,
+    getSupabaseAuthSession,
     signOutSupabaseSession,
     findUserByNickname,
     createUserWithProfile,

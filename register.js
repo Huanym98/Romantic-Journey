@@ -113,6 +113,7 @@ registerForm.addEventListener('submit', async (event) => {
   recordAdminEvent('register', nickname, createdAt);
   localStorage.setItem(USERS_KEY, JSON.stringify(users));
 
+  await registerSupabaseAuthUser(nickname, password);
   await syncUserToSupabase({ nickname, password });
   await ensureSupabaseSession(nickname, password);
 
@@ -121,21 +122,6 @@ registerForm.addEventListener('submit', async (event) => {
 });
 
 
-function logStoredSupabaseSessionSummary() {
-  const raw = localStorage.getItem('romanticJourneySupabaseAuthSession');
-  let parsed = null;
-  try { parsed = raw ? JSON.parse(raw) : null; } catch (error) { console.error('[supabase-auth-debug] stored session parse failed in register.js', error); }
-  const hasAccessToken = Boolean(parsed?.access_token || parsed?.session?.access_token || parsed?.data?.session?.access_token);
-  const hasRefreshToken = Boolean(parsed?.refresh_token || parsed?.session?.refresh_token || parsed?.data?.session?.refresh_token);
-  console.log('[supabase-auth-debug] localStorage romanticJourneySupabaseAuthSession summary', {
-    exists: Boolean(raw),
-    length: Number(raw?.length || 0),
-    hasAccessToken,
-    hasRefreshToken,
-    preview: String(raw || '').slice(0, 80) || null
-  });
-  return { hasAccessToken, hasRefreshToken };
-}
 
 function getUsers() {
   try {
@@ -170,17 +156,29 @@ async function ensureSupabaseSession(nickname, password) {
   if (!supabaseClient?.isEnabled?.() || typeof supabaseClient.signInWithLocalAccount !== 'function') return;
   try {
     const session = await supabaseClient.signInWithLocalAccount(nickname, password);
-    console.log('[supabase-auth-debug] ensureSupabaseSession token result', {
+    console.log('[supabase-auth] ensure session result', {
       hasAccessToken: Boolean(session?.access_token),
       hasRefreshToken: Boolean(session?.refresh_token)
     });
-    const summary = logStoredSupabaseSessionSummary();
-    if (!summary.hasAccessToken || !summary.hasRefreshToken) {
-      throw new Error('Supabase session 未写入 localStorage');
-    }
   } catch (error) {
     console.error('[supabase-auth] sign in failed', error);
     message.textContent = `Supabase 会话建立失败：${error.message}`;
+    throw error;
+  }
+}
+
+async function registerSupabaseAuthUser(nickname, password) {
+  if (!supabaseClient?.isEnabled?.() || typeof supabaseClient.signUpWithLocalAccount !== 'function') return;
+  try {
+    await supabaseClient.signUpWithLocalAccount(nickname, password);
+  } catch (error) {
+    const msg = String(error?.message || '');
+    if (/User already registered|already been registered/i.test(msg)) {
+      console.warn('[supabase-auth] signUp skipped because user already exists');
+      return;
+    }
+    console.error('[supabase-auth] sign up failed', error);
+    message.textContent = `Supabase 注册失败：${error.message}`;
     throw error;
   }
 }
