@@ -136,8 +136,8 @@ function dataUrlToFile(dataUrl, filename = `img-${Date.now()}.jpg`) {
   return new File([arr], filename, { type: mime });
 }
 
-const MAX_DIARY_UPLOAD_COUNT = 30;
-const MAX_DIARY_TOTAL_MB = 8;
+const MAX_DIARY_UPLOAD_COUNT = 18;
+const MAX_DIARY_TOTAL_MB = 500;
 const MAX_DIARY_TOTAL_BYTES = MAX_DIARY_TOTAL_MB * 1024 * 1024;
 
 function formatBytesToMB(bytes) {
