@@ -5,6 +5,16 @@
   const AUTH_SESSION_KEY = 'romanticJourneySupabaseAuthSession';
   const DEFAULT_STORAGE_BUCKET = 'Trip_Photos';
   const userIdCache = new Map();
+  let supabaseClientInstance = null;
+
+  function getSupabaseClient() {
+    if (supabaseClientInstance) return supabaseClientInstance;
+    const { url, anonKey } = normalizeConfig();
+    if (!url || !anonKey) return null;
+    if (typeof global.supabase?.createClient !== 'function') return null;
+    supabaseClientInstance = global.supabase.createClient(url, anonKey);
+    return supabaseClientInstance;
+  }
 
   function normalizeConfig() {
     const fromWindow = global.SUPABASE_CONFIG || {};
@@ -91,12 +101,30 @@
     return `${safePathPart(nickname).toLowerCase()}@romantic-journey.local`;
   }
 
+  async function syncSessionToSupabaseClient(session) {
+    const client = getSupabaseClient();
+    if (!client?.auth?.setSession) return null;
+    const target = session || getStoredAuthSession();
+    if (!target?.access_token || !target?.refresh_token) return null;
+    try {
+      const result = await client.auth.setSession({
+        access_token: target.access_token,
+        refresh_token: target.refresh_token
+      });
+      return result?.data?.session || target;
+    } catch (error) {
+      console.warn('[supabase-auth] setSession failed', error);
+      return null;
+    }
+  }
+
   async function signInWithLocalAccount(nickname, password) {
     if (!nickname || !password) throw new Error('nickname and password are required');
     const email = buildAuthEmailFromNickname(nickname);
     try {
       const session = await authRequest('token?grant_type=password', { email, password });
       setStoredAuthSession(session);
+      await syncSessionToSupabaseClient(session);
       return session;
     } catch (error) {
       const message = String(error?.message || '');
@@ -105,6 +133,7 @@
       await authRequest('signup', { email, password, data: { nickname } }).catch(() => null);
       const session = await authRequest('token?grant_type=password', { email, password });
       setStoredAuthSession(session);
+      await syncSessionToSupabaseClient(session);
       return session;
     }
   }
@@ -115,7 +144,10 @@
     const payload = parseJwtPayload(stored.access_token);
     const expMs = Number(payload?.exp || 0) * 1000;
     const now = Date.now();
-    if (expMs && now < expMs - 30_000) return stored;
+    if (expMs && now < expMs - 30_000) {
+      await syncSessionToSupabaseClient(stored);
+      return stored;
+    }
     if (!stored.refresh_token) {
       clearStoredAuthSession();
       return null;
@@ -123,6 +155,7 @@
     try {
       const refreshed = await authRequest('token?grant_type=refresh_token', { refresh_token: stored.refresh_token });
       setStoredAuthSession(refreshed);
+      await syncSessionToSupabaseClient(refreshed);
       return refreshed;
     } catch {
       clearStoredAuthSession();
@@ -132,23 +165,18 @@
 
   async function signOutSupabaseSession() {
     const session = getStoredAuthSession();
+    const client = getSupabaseClient();
     try {
       if (session?.access_token) await authRequest('logout', null, session.access_token);
     } catch {
       // ignore signout network errors
     }
+    try {
+      if (client?.auth?.signOut) await client.auth.signOut();
+    } catch {
+      // ignore sdk signout errors
+    }
     clearStoredAuthSession();
-  }
-
-  function getAuthDebugResult() {
-    const session = getStoredAuthSession();
-    const user = session?.user || null;
-    return {
-      getUser: { data: { user }, error: null },
-      getSession: { data: { session }, error: null },
-      user,
-      session
-    };
   }
 
   async function uploadDiaryImage(file, options = {}) {
@@ -157,26 +185,32 @@
     if (!url || !anonKey) throw new Error('Supabase config missing');
 
     await restoreSupabaseSession();
-    const authState = getAuthDebugResult();
-    console.log('[supabase-upload-debug] auth.getUser', authState.getUser);
-    console.log('[supabase-upload-debug] auth.getSession', authState.getSession);
+    const client = getSupabaseClient();
+    if (!client?.auth?.getUser || !client?.auth?.getSession) {
+      throw new Error('Supabase SDK 未加载，无法校验登录态');
+    }
 
-    const user = authState.user;
-    const session = authState.session;
-    if (!session?.access_token) {
+    const userResult = await client.auth.getUser();
+    const sessionResult = await client.auth.getSession();
+    console.log('[supabase-upload-debug] auth.getUser', userResult);
+    console.log('[supabase-upload-debug] auth.getSession', sessionResult);
+
+    const user = userResult?.data?.user || null;
+    const session = sessionResult?.data?.session || null;
+    if (!session?.access_token || !user?.id) {
       throw new Error('当前未登录 Supabase，无法上传图片');
     }
 
     const tokenPayload = parseJwtPayload(session.access_token) || {};
     const tokenSub = String(tokenPayload.sub || '').trim();
     const sessionUserId = String(user?.id || '').trim();
-    const resolvedUserId = tokenSub || sessionUserId;
+    const resolvedUserId = String(user.id || '').trim();
     if (!resolvedUserId) {
       throw new Error('当前未登录 Supabase，无法上传图片');
     }
 
-    if (tokenSub && sessionUserId && tokenSub !== sessionUserId) {
-      console.warn('[supabase-upload-debug] user id mismatch, force use token.sub', { tokenSub, sessionUserId });
+    if (tokenSub && tokenSub !== resolvedUserId) {
+      console.warn('[supabase-upload-debug] token.sub and user.id mismatch', { tokenSub, userId: resolvedUserId });
     }
 
     if (storageBucket !== 'Trip_Photos') {
