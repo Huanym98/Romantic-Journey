@@ -6,13 +6,33 @@
   const DEFAULT_STORAGE_BUCKET = 'Trip_Photos';
   const userIdCache = new Map();
   let supabaseClientInstance = null;
+  let initLogged = false;
+
+  function getSupabaseFactory() {
+    if (typeof global.supabase?.createClient === 'function') return global.supabase.createClient;
+    if (typeof global.supabasejs?.createClient === 'function') return global.supabasejs.createClient;
+    return null;
+  }
+
+  function logSdkInit(url, anonKey, hasFactory, created) {
+    if (initLogged) return;
+    initLogged = true;
+    console.log('[supabase-init] sdkLoaded', Boolean(hasFactory));
+    console.log('[supabase-init] clientCreated', Boolean(created));
+    console.log('[supabase-init] url', url || null);
+    console.log('[supabase-init] hasAnonKey', Boolean(anonKey));
+  }
 
   function getSupabaseClient() {
     if (supabaseClientInstance) return supabaseClientInstance;
     const { url, anonKey } = normalizeConfig();
-    if (!url || !anonKey) return null;
-    if (typeof global.supabase?.createClient !== 'function') return null;
-    supabaseClientInstance = global.supabase.createClient(url, anonKey);
+    const createClient = getSupabaseFactory();
+    if (!url || !anonKey || !createClient) {
+      logSdkInit(url, anonKey, createClient, false);
+      return null;
+    }
+    supabaseClientInstance = createClient(url, anonKey);
+    logSdkInit(url, anonKey, createClient, true);
     return supabaseClientInstance;
   }
 
@@ -670,5 +690,6 @@
     uploadDiaryImage
   };
 
+  getSupabaseClient();
   void restoreSupabaseSession();
 })(window);
