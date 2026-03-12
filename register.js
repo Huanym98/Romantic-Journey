@@ -85,6 +85,7 @@ registerForm.addEventListener('submit', async (event) => {
   const form = new FormData(registerForm);
   const nickname = String(form.get('nickname') || '').trim();
   const password = String(form.get('password') || '').trim();
+  console.log('[supabase-auth-debug] register/login submit start', { nickname, passwordLength: Number(password.length) });
   if (!nickname || !password) return;
 
   const users = getUsers();
@@ -95,6 +96,7 @@ registerForm.addEventListener('submit', async (event) => {
       message.textContent = t('wrongPassword');
       return;
     }
+    await ensureSupabaseSession(nickname, password);
     localStorage.setItem(CURRENT_USER_KEY, existing.nickname);
     window.location.href = 'index.html';
     return;
@@ -111,11 +113,15 @@ registerForm.addEventListener('submit', async (event) => {
   recordAdminEvent('register', nickname, createdAt);
   localStorage.setItem(USERS_KEY, JSON.stringify(users));
 
+  await registerSupabaseAuthUser(nickname, password);
   await syncUserToSupabase({ nickname, password });
+  await ensureSupabaseSession(nickname, password);
 
   localStorage.setItem(CURRENT_USER_KEY, nickname);
   window.location.href = 'index.html';
 });
+
+
 
 function getUsers() {
   try {
@@ -144,6 +150,38 @@ function validatePasswordComplexity(password) {
   return { ok: true, message: '' };
 }
 
+
+
+async function ensureSupabaseSession(nickname, password) {
+  if (!supabaseClient?.isEnabled?.() || typeof supabaseClient.signInWithLocalAccount !== 'function') return;
+  try {
+    const session = await supabaseClient.signInWithLocalAccount(nickname, password);
+    console.log('[supabase-auth] ensure session result', {
+      hasAccessToken: Boolean(session?.access_token),
+      hasRefreshToken: Boolean(session?.refresh_token)
+    });
+  } catch (error) {
+    console.error('[supabase-auth] sign in failed', error);
+    message.textContent = `Supabase 会话建立失败：${error.message}`;
+    throw error;
+  }
+}
+
+async function registerSupabaseAuthUser(nickname, password) {
+  if (!supabaseClient?.isEnabled?.() || typeof supabaseClient.signUpWithLocalAccount !== 'function') return;
+  try {
+    await supabaseClient.signUpWithLocalAccount(nickname, password);
+  } catch (error) {
+    const msg = String(error?.message || '');
+    if (/User already registered|already been registered/i.test(msg)) {
+      console.warn('[supabase-auth] signUp skipped because user already exists');
+      return;
+    }
+    console.error('[supabase-auth] sign up failed', error);
+    message.textContent = `Supabase 注册失败：${error.message}`;
+    throw error;
+  }
+}
 
 async function syncUserToSupabase(user) {
   if (!supabaseClient?.isEnabled?.()) return;

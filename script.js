@@ -381,8 +381,13 @@ switchAccountBtn?.addEventListener('click', () => {
   closeProfilePanel();
   window.location.href = 'register.html';
 });
-logoutBtn?.addEventListener('click', () => {
+logoutBtn?.addEventListener('click', async () => {
   closeProfilePanel();
+  try {
+    await supabaseClient?.signOutSupabaseSession?.();
+  } catch (error) {
+    console.error('[supabase-auth] sign out failed', error);
+  }
   localStorage.removeItem(CURRENT_USER_KEY);
   window.location.href = 'register.html';
 });

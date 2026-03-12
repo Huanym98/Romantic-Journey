@@ -4,6 +4,36 @@
   const STORAGE_BUCKET_KEY = 'romanticJourneySupabaseBucket';
   const DEFAULT_STORAGE_BUCKET = 'Trip_Photos';
   const userIdCache = new Map();
+  let supabaseClientInstance = null;
+  let initLogged = false;
+
+  function getSupabaseFactory() {
+    if (typeof global.supabase?.createClient === 'function') return global.supabase.createClient;
+    if (typeof global.supabasejs?.createClient === 'function') return global.supabasejs.createClient;
+    return null;
+  }
+
+  function logSdkInit(url, anonKey, hasFactory, created) {
+    if (initLogged) return;
+    initLogged = true;
+    console.log('[supabase-init] sdkLoaded', Boolean(hasFactory));
+    console.log('[supabase-init] clientCreated', Boolean(created));
+    console.log('[supabase-init] url', url || null);
+    console.log('[supabase-init] hasAnonKey', Boolean(anonKey));
+  }
+
+  function getSupabaseClient() {
+    if (supabaseClientInstance) return supabaseClientInstance;
+    const { url, anonKey } = normalizeConfig();
+    const createClient = getSupabaseFactory();
+    if (!url || !anonKey || !createClient) {
+      logSdkInit(url, anonKey, createClient, false);
+      return null;
+    }
+    supabaseClientInstance = createClient(url, anonKey);
+    logSdkInit(url, anonKey, createClient, true);
+    return supabaseClientInstance;
+  }
 
   function normalizeConfig() {
     const fromWindow = global.SUPABASE_CONFIG || {};
@@ -35,30 +65,131 @@
     return String(value || '').trim().replace(/[^a-zA-Z0-9_-]/g, '_') || 'unknown';
   }
 
+  function buildAuthEmailFromNickname(nickname) {
+    return `${safePathPart(nickname).toLowerCase()}@romanticjourney.app`;
+  }
+
+  async function signUpWithLocalAccount(nickname, password) {
+    if (!nickname || !password) throw new Error('nickname and password are required');
+    const client = getSupabaseClient();
+    if (!client?.auth?.signUp) throw new Error('Supabase SDK 未加载，无法注册');
+    const email = buildAuthEmailFromNickname(nickname);
+    console.log('[supabase-auth] signUp start', { nickname, email });
+    const result = await client.auth.signUp({ email, password });
+    console.log('[supabase-auth] signUp result', {
+      data: {
+        userId: result?.data?.user?.id || null,
+        hasSession: Boolean(result?.data?.session)
+      },
+      error: result?.error || null
+    });
+    if (result?.error) throw result.error;
+    return result?.data || null;
+  }
+
+  async function signInWithLocalAccount(nickname, password) {
+    if (!nickname || !password) throw new Error('nickname and password are required');
+    const client = getSupabaseClient();
+    if (!client?.auth?.signInWithPassword) throw new Error('Supabase SDK 未加载，无法登录');
+    const email = buildAuthEmailFromNickname(nickname);
+    console.log('[supabase-auth] signIn start', { nickname, email });
+    const result = await client.auth.signInWithPassword({ email, password });
+    console.log('[supabase-auth] signIn result', {
+      data: {
+        userId: result?.data?.user?.id || null,
+        hasSession: Boolean(result?.data?.session),
+        accessToken: Boolean(result?.data?.session?.access_token),
+        refreshToken: Boolean(result?.data?.session?.refresh_token)
+      },
+      error: result?.error || null
+    });
+    if (result?.error) throw result.error;
+    if (!result?.data?.session?.access_token || !result?.data?.session?.refresh_token) {
+      throw new Error('Supabase 登录成功但未返回 session（可能开启了邮箱确认）');
+    }
+    return result.data.session;
+  }
+
+  async function getSupabaseAuthSession() {
+    const client = getSupabaseClient();
+    if (!client?.auth?.getSession) return null;
+    const sessionResult = await client.auth.getSession();
+    console.log('[supabase-auth] getSession', sessionResult);
+    return sessionResult?.data?.session || null;
+  }
+
+  async function restoreSupabaseSession() {
+    return getSupabaseAuthSession();
+  }
+
+  async function signOutSupabaseSession() {
+    const client = getSupabaseClient();
+    if (!client?.auth?.signOut) return;
+    const result = await client.auth.signOut();
+    if (result?.error) {
+      console.error('[supabase-auth] signOut failed', result.error);
+      throw result.error;
+    }
+  }
+
   async function uploadDiaryImage(file, options = {}) {
     if (!file) throw new Error('file is required');
     const { url, anonKey, storageBucket } = normalizeConfig();
     if (!url || !anonKey) throw new Error('Supabase config missing');
-    const nickname = safePathPart(options.nickname || 'guest');
-    const batchId = safePathPart(options.batchId || Date.now());
-    const index = Number(options.index || 0);
-    const ext = extFromFileName(file.name, file.type?.includes('png') ? 'png' : 'jpg');
-    const objectPath = `${nickname}/${batchId}/${Date.now()}_${index}.${ext}`;
+
+    await restoreSupabaseSession();
+    const client = getSupabaseClient();
+    if (!client?.auth?.getUser || !client?.auth?.getSession) {
+      throw new Error('Supabase SDK 未加载，无法校验登录态');
+    }
+
+    const userResult = await client.auth.getUser();
+    const sessionResult = await client.auth.getSession();
+    console.log('[supabase-upload-debug] auth.getUser', userResult);
+    console.log('[supabase-upload-debug] auth.getSession', sessionResult);
+
+    const user = userResult?.data?.user || null;
+    const session = sessionResult?.data?.session || null;
+    if (!session?.access_token || !user?.id) {
+      throw new Error('当前未登录 Supabase，无法上传图片');
+    }
+
+    const resolvedUserId = String(user.id || '').trim();
+    if (!resolvedUserId) {
+      throw new Error('当前未登录 Supabase，无法上传图片');
+    }
+
+    if (storageBucket !== 'Trip_Photos') {
+      console.warn('[supabase-upload-debug] bucket mismatch, expected "Trip_Photos"', { storageBucket });
+    }
+
+    const objectPath = `${resolvedUserId}/${Date.now()}-${file.name}`;
+    console.log('[supabase-upload-debug] bucket', storageBucket);
+    console.log('[supabase-upload-debug] filePath', objectPath);
+
     const encodedPath = objectPath.split('/').map((s) => encodeURIComponent(s)).join('/');
-    const response = await fetch(`${url}/storage/v1/object/${encodeURIComponent(storageBucket)}/${encodedPath}`, {
+    const uploadUrl = `${url}/storage/v1/object/${encodeURIComponent(storageBucket)}/${encodedPath}`;
+    console.log('[supabase-upload-debug] uploadUrl', uploadUrl);
+    const response = await fetch(uploadUrl, {
       method: 'POST',
       headers: {
         apikey: anonKey,
-        Authorization: `Bearer ${anonKey}`,
+        Authorization: `Bearer ${session.access_token}`,
         'x-upsert': 'false',
         'Content-Type': file.type || 'application/octet-stream'
       },
       body: file
     });
+    let uploadData = null;
+    let uploadError = null;
     if (!response.ok) {
       const text = await response.text();
-      throw new Error(`Supabase storage ${response.status}: ${text}`);
+      uploadError = `Supabase storage ${response.status}: ${text}`;
+      console.log('[supabase-upload-debug] storage upload result', { data: uploadData, error: uploadError });
+      throw new Error(uploadError);
     }
+    uploadData = await response.json().catch(() => null);
+    console.log('[supabase-upload-debug] storage upload result', { data: uploadData, error: uploadError });
     const publicUrl = `${url}/storage/v1/object/public/${encodeURIComponent(storageBucket)}/${encodedPath}`;
     return {
       bucket: storageBucket,
@@ -453,6 +584,11 @@
     normalizeConfig,
     setConfig,
     isEnabled,
+    signUpWithLocalAccount,
+    signInWithLocalAccount,
+    restoreSupabaseSession,
+    getSupabaseAuthSession,
+    signOutSupabaseSession,
     findUserByNickname,
     createUserWithProfile,
     ensureUser,
@@ -475,4 +611,7 @@
     syncAdminEvent,
     uploadDiaryImage
   };
+
+  getSupabaseClient();
+  void restoreSupabaseSession();
 })(window);
